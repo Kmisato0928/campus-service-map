@@ -43,7 +43,11 @@ public class CanvasMapRenderer extends Pane {
 
     private final Map<String, Image> tileCache = new HashMap<>();
     private final Set<String> pendingLoads = ConcurrentHashMap.newKeySet();
-    private final ExecutorService tileLoader = Executors.newFixedThreadPool(4);
+    private final ExecutorService tileLoader = Executors.newFixedThreadPool(4, r -> {
+        Thread t = new Thread(r);
+        t.setDaemon(true);
+        return t;
+    });
 
     private double dragStartX, dragStartY;
     private boolean isDragging = false;
@@ -256,28 +260,31 @@ public class CanvasMapRenderer extends Pane {
             currentAnimation = null;
         }
 
-        // 将当前偏移量"烘烤"到中心坐标中，使动画起始帧无跳变
-        double virtualTileX = lon2tileExact(centerLon, zoom) + offsetX / TILE_SIZE;
-        double virtualTileY = lat2tileExact(centerLat, zoom) + offsetY / TILE_SIZE;
-        double startLat = tile2lat(virtualTileY, zoom);
-        double startLon = tile2lon(virtualTileX, zoom);
+        final double startLat = centerLat;
+        final double startLon = centerLon;
+        final double startOffX = offsetX;
+        final double startOffY = offsetY;
 
-        // First frame: move center to virtual center, clear offset (no visual jump)
-        centerLat = startLat;
-        centerLon = startLon;
-        offsetX = 0;
-        offsetY = 0;
+        // 计算最终 offset，使得建筑恰好位于屏幕正中央
+        // latLonToScreen 使用 floor(center) 计算，要得到 w/2 需满足：
+        // (bldgTile - centerTile_int) * TILE_SIZE + offset = 0
+        // => offset = (centerTile_int - bldgTile) * TILE_SIZE = -frac(bldgTile) * TILE_SIZE
+        double targetTileX = lon2tileExact(targetLon, zoom);
+        double targetTileY = lat2tileExact(targetLat, zoom);
+        int finalTileX = lon2tile(targetLon, zoom);
+        int finalTileY = lat2tile(targetLat, zoom);
+        double endOffX = (finalTileX - targetTileX) * TILE_SIZE;
+        double endOffY = (finalTileY - targetTileY) * TILE_SIZE;
 
         double dLat = targetLat - startLat;
         double dLon = targetLon - startLon;
-        // 经度归一化，防止绕远路
         if (dLon > 180) dLon -= 360;
         else if (dLon < -180) dLon += 360;
 
-        final double fStartLat = startLat;
-        final double fStartLon = startLon;
         final double fDlat = dLat;
         final double fDlon = dLon;
+        final double fEndOffX = endOffX;
+        final double fEndOffY = endOffY;
         final long duration = 400_000_000L; // 400ms
 
         currentAnimation = new AnimationTimer() {
@@ -287,14 +294,17 @@ public class CanvasMapRenderer extends Pane {
             public void handle(long now) {
                 double t = Math.min(1.0, (now - startTime) / (double) duration);
                 t = 1 - (1 - t) * (1 - t); // ease-out quad
-                centerLat = fStartLat + fDlat * t;
-                centerLon = fStartLon + fDlon * t;
-                offsetX = 0;
-                offsetY = 0;
+                centerLat = startLat + fDlat * t;
+                centerLon = startLon + fDlon * t;
+                offsetX = startOffX + (fEndOffX - startOffX) * t;
+                offsetY = startOffY + (fEndOffY - startOffY) * t;
                 render();
                 if (t >= 1.0) {
                     centerLat = targetLat;
                     centerLon = targetLon;
+                    offsetX = fEndOffX;
+                    offsetY = fEndOffY;
+                    render();
                     stop();
                     currentAnimation = null;
                 }
@@ -305,15 +315,17 @@ public class CanvasMapRenderer extends Pane {
 
     private void renderMarkers(GraphicsContext g) {
         for (BuildingMarker m : markers) {
+            boolean isTarget = (dragModeActive && m == dragTarget);
             double[] screen;
-            if (dragModeActive && m == dragTarget) {
+            if (isTarget) {
                 screen = latLonToScreen(dragVisualLat, dragVisualLon);
             } else {
                 screen = latLonToScreen(m.lat, m.lon);
             }
             if (screen == null) continue;
 
-            if (dragModeActive) {
+            if (isTarget) {
+                // 正在被拖拽的建筑：红底黄边放大
                 g.setFill(Color.RED);
                 g.fillOval(screen[0] - 10, screen[1] - 10, 20, 20);
                 g.setStroke(Color.YELLOW);
@@ -332,8 +344,9 @@ public class CanvasMapRenderer extends Pane {
     private double[] latLonToScreen(double lat, double lon) {
         double tileX = lon2tileExact(lon, zoom);
         double tileY = lat2tileExact(lat, zoom);
-        double centerTileX = lon2tileExact(centerLon, zoom);
-        double centerTileY = lat2tileExact(centerLat, zoom);
+        // 使用整数瓦片中心（floor），与瓦片渲染保持一致
+        int centerTileX = lon2tile(centerLon, zoom);
+        int centerTileY = lat2tile(centerLat, zoom);
 
         double pixelX = (tileX - centerTileX) * TILE_SIZE + getWidth() / 2 + offsetX;
         double pixelY = (tileY - centerTileY) * TILE_SIZE + getHeight() / 2 + offsetY;
@@ -342,8 +355,9 @@ public class CanvasMapRenderer extends Pane {
     }
 
     private double[] screenToLatLon(double screenX, double screenY) {
-        double centerTileX = lon2tileExact(centerLon, zoom);
-        double centerTileY = lat2tileExact(centerLat, zoom);
+        // 使用整数瓦片中心（floor），与瓦片渲染保持一致
+        int centerTileX = lon2tile(centerLon, zoom);
+        int centerTileY = lat2tile(centerLat, zoom);
 
         double tileX = (screenX - getWidth() / 2 - offsetX) / TILE_SIZE + centerTileX;
         double tileY = (screenY - getHeight() / 2 - offsetY) / TILE_SIZE + centerTileY;
@@ -374,7 +388,8 @@ public class CanvasMapRenderer extends Pane {
             }
             if (screen == null) continue;
             double dist = Math.sqrt(Math.pow(x - screen[0], 2) + Math.pow(y - screen[1], 2));
-            if (dist <= (dragModeActive ? 15 : 12)) return m;
+            double threshold = (dragModeActive && m == dragTarget) ? 15 : 12;
+            if (dist <= threshold) return m;
         }
         return null;
     }

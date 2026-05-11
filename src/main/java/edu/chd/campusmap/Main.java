@@ -43,6 +43,11 @@ public class Main extends Application {
         primaryStage.setMinWidth(900);
         primaryStage.setMinHeight(600);
 
+        // 关闭窗口时确保 JavaFX 退出（清理 tileLoader 等非守护线程）
+        primaryStage.setOnCloseRequest(e -> {
+            javafx.application.Platform.exit();
+        });
+
         showLoginView();
         primaryStage.show();
     }
