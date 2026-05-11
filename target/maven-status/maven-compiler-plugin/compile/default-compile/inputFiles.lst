@@ -5,6 +5,7 @@ S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\ch
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\controller\SearchController.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\model\User.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\util\DatabaseConnection.java
+S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\service\NavigationService.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\dao\CommentDAO.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\view\UserCenterView.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\util\UserSession.java
@@ -24,13 +25,19 @@ S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\ch
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\view\SearchPanel.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\controller\UserController.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\dao\UserDAO.java
+S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\view\NavigationPanel.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\util\ConfigLoader.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\util\DatabaseInitializer.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\util\PasswordUtil.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\dao\BuildingOverrideDAO.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\view\EditBuildingDialog.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\view\MainMapView.java
+S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\model\PathNode.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\controller\MapController.java
+S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\model\PathEdge.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\service\SearchService.java
+S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\dao\PathEdgeDAO.java
+S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\util\OverpassImporter.java
+S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\dao\PathNodeDAO.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\service\UserService.java
 S:\1.0_desktop\课\面向对象设计与模式\课程设计\src\main\java\edu\chd\campusmap\model\Favorite.java

@@ -6,6 +6,8 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeLineJoin;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -34,8 +36,8 @@ public class CanvasMapRenderer extends Pane {
             System.getProperty("java.io.tmpdir"), "campusmap-tiles");
 
     private final Canvas canvas;
-    private double centerLat = 34.3740;
-    private double centerLon = 108.9100;
+    private double centerLat = 34.3705;
+    private double centerLon = 108.8985;
     private int zoom = 15;
 
     private double offsetX = 0;
@@ -64,6 +66,9 @@ public class CanvasMapRenderer extends Pane {
 
     private final List<BuildingMarker> markers = new ArrayList<>();
     private Consumer<BuildingMarker> onMarkerClick;
+
+    // Navigation path
+    private List<double[]> navigationPath;
 
     public static class BuildingMarker {
         public final int id;
@@ -181,12 +186,21 @@ public class CanvasMapRenderer extends Pane {
                 zoom--;
             }
             if (oldZoom != zoom) {
-                double currentCenterTileX = lon2tileExact(centerLon, oldZoom) + offsetX / TILE_SIZE;
-                double currentCenterTileY = lat2tileExact(centerLat, oldZoom) + offsetY / TILE_SIZE;
-                centerLon = tile2lon(currentCenterTileX, oldZoom);
-                centerLat = tile2lat(currentCenterTileY, oldZoom);
-                offsetX = 0;
-                offsetY = 0;
+                // 获取当前屏幕中心的地理坐标
+                double[] screenCenter = screenToLatLon(getWidth() / 2, getHeight() / 2);
+                double centerScreenLat = screenCenter[0];
+                double centerScreenLon = screenCenter[1];
+
+                // 在新 zoom 下计算中心瓦片和偏移，保持同一地理点位于屏幕中心
+                double exactTileX = lon2tileExact(centerScreenLon, zoom);
+                double exactTileY = lat2tileExact(centerScreenLat, zoom);
+                int newCenterTileX = (int) Math.floor(exactTileX);
+                int newCenterTileY = (int) Math.floor(exactTileY);
+                centerLon = tile2lon(newCenterTileX, zoom);
+                centerLat = tile2lat(newCenterTileY, zoom);
+                offsetX = (newCenterTileX - exactTileX) * TILE_SIZE;
+                offsetY = (newCenterTileY - exactTileY) * TILE_SIZE;
+
                 tileCache.clear();
                 pendingLoads.clear();
                 System.out.println("[Zoom] " + oldZoom + " -> " + zoom + " | center=(" + centerLat + ", " + centerLon + ")");
@@ -249,6 +263,9 @@ public class CanvasMapRenderer extends Pane {
         }
 
         renderMarkers(g);
+        if (navigationPath != null && !navigationPath.isEmpty()) {
+            drawNavigationPath(g);
+        }
     }
 
     /**
@@ -498,6 +515,60 @@ public class CanvasMapRenderer extends Pane {
     public void clearMarkers() {
         markers.clear();
         render();
+    }
+
+    public void setNavigationPath(List<double[]> path) {
+        this.navigationPath = path;
+        render();
+    }
+
+    public void clearNavigationPath() {
+        this.navigationPath = null;
+        render();
+    }
+
+    private void drawNavigationPath(GraphicsContext g) {
+        double w = getWidth();
+        double h = getHeight();
+        if (w <= 0 || h <= 0) return;
+
+        int n = navigationPath.size();
+        double[] xs = new double[n];
+        double[] ys = new double[n];
+
+        for (int i = 0; i < n; i++) {
+            double[] screen = latLonToScreen(navigationPath.get(i)[0], navigationPath.get(i)[1]);
+            xs[i] = screen[0];
+            ys[i] = screen[1];
+        }
+
+        // 半透明背景线
+        g.setStroke(Color.rgb(30, 144, 255, 0.3));
+        g.setLineWidth(8);
+        g.setLineCap(StrokeLineCap.ROUND);
+        g.setLineJoin(StrokeLineJoin.ROUND);
+        g.strokePolyline(xs, ys, n);
+
+        // 前景主线
+        g.setStroke(Color.rgb(30, 144, 255, 0.9));
+        g.setLineWidth(4);
+        g.setLineCap(StrokeLineCap.ROUND);
+        g.setLineJoin(StrokeLineJoin.ROUND);
+        g.strokePolyline(xs, ys, n);
+
+        // 起点标记
+        g.setFill(Color.GREEN);
+        g.fillOval(xs[0] - 8, ys[0] - 8, 16, 16);
+        g.setStroke(Color.WHITE);
+        g.setLineWidth(2);
+        g.strokeOval(xs[0] - 8, ys[0] - 8, 16, 16);
+
+        // 终点标记
+        g.setFill(Color.RED);
+        g.fillOval(xs[n - 1] - 8, ys[n - 1] - 8, 16, 16);
+        g.setStroke(Color.WHITE);
+        g.setLineWidth(2);
+        g.strokeOval(xs[n - 1] - 8, ys[n - 1] - 8, 16, 16);
     }
 
     public void setOnMarkerClick(Consumer<BuildingMarker> callback) {

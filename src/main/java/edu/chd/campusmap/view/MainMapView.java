@@ -3,6 +3,7 @@ package edu.chd.campusmap.view;
 import edu.chd.campusmap.controller.MapController;
 import edu.chd.campusmap.model.Building;
 import edu.chd.campusmap.pattern.factory.BuildingMarkerFactory;
+import edu.chd.campusmap.service.NavigationService;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -19,6 +20,7 @@ public class MainMapView {
     private final BorderPane root;
     private final MapController mapController;
     private final CanvasMapRenderer mapRenderer;
+    private final NavigationService navigationService;
     private final List<Building> allBuildings;
     private Label statusLabel;
     private final Button userCenterBtn = new Button("个人中心");
@@ -31,7 +33,9 @@ public class MainMapView {
         this.allBuildings = userId > 0
             ? mapController.getMapService().getAllBuildingsForUser(userId)
                 : mapController.getMapService().getAllBuildings();
-      this.mapRenderer = new CanvasMapRenderer();
+        this.mapRenderer = new CanvasMapRenderer();
+        this.navigationService = new NavigationService();
+        startOsmImport();
         initUI();
      registerObserver();
         addAllMarkers();
@@ -107,6 +111,52 @@ public class MainMapView {
         mapRenderer.animateCenter(lat, lon);
     }
 
+    public List<double[]> calculateRoute(Building from, Building to) {
+        List<edu.chd.campusmap.model.PathNode> path = navigationService.findPath(from.getId(), to.getId());
+        if (path.isEmpty()) return java.util.Collections.emptyList();
+        List<double[]> latLonPath = new java.util.ArrayList<>();
+        for (edu.chd.campusmap.model.PathNode n : path) {
+            latLonPath.add(new double[]{n.getLat(), n.getLon()});
+        }
+        return latLonPath;
+    }
+
+    public double calculateRouteDistance(List<double[]> path) {
+        double total = 0;
+        for (int i = 0; i < path.size() - 1; i++) {
+            double[] a = path.get(i);
+            double[] b = path.get(i + 1);
+            total += haversine(a[0], a[1], b[0], b[1]);
+        }
+        return total;
+    }
+
+    private static double haversine(double lat1, double lon1, double lat2, double lon2) {
+        double R = 6371000;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    public void showNavigationPath(List<double[]> path) {
+        mapRenderer.setNavigationPath(path);
+    }
+
+    public void clearNavigation() {
+        mapRenderer.clearNavigationPath();
+    }
+
+    public NavigationService getNavigationService() {
+        return navigationService;
+    }
+
+    public void updateStatus(String msg) {
+        statusLabel.setText(msg);
+    }
+
     public void setUserName(String name) {
         userNameLabel.setText(" | " + name);
     }
@@ -122,6 +172,17 @@ public class MainMapView {
 
     public Button getLogoutBtn() {
         return logoutBtn;
+    }
+
+    private void startOsmImport() {
+        edu.chd.campusmap.util.OverpassImporter.setOnProgress(msg -> statusLabel.setText(msg));
+        edu.chd.campusmap.util.OverpassImporter.setOnComplete(() -> {
+            navigationService.reloadGraph();
+            statusLabel.setText("路网数据已加载，导航可使用真实道路");
+        });
+        new Thread(() -> {
+            edu.chd.campusmap.util.OverpassImporter.importIfEmpty();
+        }, "osm-importer").start();
     }
 
     private VBox createTopBar() {

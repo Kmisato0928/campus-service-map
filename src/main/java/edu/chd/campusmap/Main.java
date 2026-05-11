@@ -13,6 +13,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
+import java.util.List;
+
 public class Main extends Application {
 
     private final UserController userController = new UserController();
@@ -27,6 +29,7 @@ public class Main extends Application {
     private MainMapView mainMapView;
     private SearchPanel searchPanel;
     private DetailPanel detailPanel;
+    private NavigationPanel navigationPanel;
     private StackPane rightPanel;
 
     @Override
@@ -80,6 +83,7 @@ public class Main extends Application {
         mainMapView = new MainMapView(mapController, currentUser.getId());
         searchPanel = new SearchPanel(searchController);
         detailPanel = new DetailPanel();
+        navigationPanel = new NavigationPanel();
         detailPanel.setMapView(mainMapView);
 
         // search → map select
@@ -106,12 +110,59 @@ public class Main extends Application {
             }
         });
 
+        // ---- 导航回调 ----
+        searchPanel.setOnPlanRoute((from, to) -> {
+            List<double[]> path = mainMapView.calculateRoute(from, to);
+            if (path.isEmpty()) {
+                mainMapView.updateStatus("无法找到路径，请稍后重试");
+                return;
+            }
+            mainMapView.showNavigationPath(path);
+            double dist = mainMapView.calculateRouteDistance(path);
+
+            // 生成步骤列表
+            java.util.List<String> steps = new java.util.ArrayList<>();
+            steps.add("从 " + from.getName() + " 出发");
+            steps.add("步行 " + (dist >= 1000 ? String.format("%.2f 公里", dist / 1000) : String.format("%.0f 米", dist)));
+            steps.add("到达 " + to.getName());
+
+            navigationPanel.showRoute(from, to, dist, steps);
+            navigationPanel.setVisible(true);
+            searchPanel.setVisible(false);
+            detailPanel.setVisible(false);
+
+            mainMapView.updateStatus("已生成路径，总距离 " + (dist >= 1000 ? String.format("%.2f 公里", dist / 1000) : String.format("%.0f 米", dist)));
+        });
+
+        detailPanel.setOnNavigate(() -> {
+            Building b = detailPanel.getCurrentBuilding();
+            if (b != null) {
+                searchPanel.switchToNavMode(b);
+                searchPanel.setVisible(true);
+                detailPanel.setVisible(false);
+                navigationPanel.setVisible(false);
+            }
+        });
+
+        navigationPanel.setOnExit(() -> {
+            mainMapView.clearNavigation();
+            navigationPanel.setVisible(false);
+            searchPanel.setVisible(true);
+            detailPanel.setVisible(false);
+        });
+
+        navigationPanel.setOnBack(() -> {
+            navigationPanel.setVisible(false);
+            searchPanel.setVisible(true);
+            detailPanel.setVisible(false);
+        });
+
         mainLayout.setCenter(mainMapView.getRoot().getCenter());
         mainLayout.setBottom(mainMapView.getRoot().getBottom());
         mainLayout.setTop(mainMapView.getRoot().getTop());
 
-        // right side: stack search + detail
-        rightPanel = new StackPane(searchPanel, detailPanel);
+        // right side: stack search + detail + nav
+        rightPanel = new StackPane(searchPanel, detailPanel, navigationPanel);
         mainLayout.setRight(rightPanel);
 
         // user info & buttons
@@ -128,11 +179,13 @@ public class Main extends Application {
         detailPanel.showBuilding(building, user);
         detailPanel.setVisible(true);
         searchPanel.setVisible(false);
+        if (navigationPanel != null) navigationPanel.setVisible(false);
     }
 
     private void showSearchPanel() {
         searchPanel.setVisible(true);
         detailPanel.setVisible(false);
+        if (navigationPanel != null) navigationPanel.setVisible(false);
     }
 
     private void showUserCenter() {

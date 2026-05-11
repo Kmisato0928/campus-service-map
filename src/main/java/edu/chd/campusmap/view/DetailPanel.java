@@ -34,8 +34,10 @@ public class DetailPanel extends VBox {
     private final Button editBtn;
     private final Button submitBtn;
     private final Label msgLabel;
+    private final Button navigateBtn;
     private Runnable onDataChanged;
     private Runnable onBack;
+    private Runnable onNavigate;
     private MainMapView mainMapView;
     private EditBuildingDialog currentEditDialog;
 
@@ -88,7 +90,11 @@ public class DetailPanel extends VBox {
             }
         });
 
-        HBox infoRow = new HBox(10, categoryLabel, locateBtn, favoriteBtn, editBtn);
+        navigateBtn = new Button("导航");
+        navigateBtn.setStyle("-fx-background-color: #e67e22; -fx-text-fill: white;");
+        navigateBtn.setOnAction(e -> { if (onNavigate != null) onNavigate.run(); });
+
+        HBox infoRow = new HBox(10, categoryLabel, locateBtn, navigateBtn, favoriteBtn, editBtn);
         infoRow.setAlignment(Pos.CENTER_LEFT);
 
         Separator sep1 = new Separator();
@@ -333,5 +339,9 @@ public class DetailPanel extends VBox {
 
     public void setOnBack(Runnable onBack) {
         this.onBack = onBack;
+    }
+
+    public void setOnNavigate(Runnable onNavigate) {
+        this.onNavigate = onNavigate;
     }
 }

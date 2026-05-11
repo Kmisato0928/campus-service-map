@@ -28,13 +28,9 @@ public class DatabaseInitializer {
                 System.out.println("[DB] 数据库已有数据，仅增量创建新表...");
                 // 兼容旧表：添加 edited_by_admin 列
                 try { stmt.execute("ALTER TABLE buildings ADD COLUMN edited_by_admin BOOLEAN DEFAULT FALSE"); } catch (Exception ignored) {}
-                // 只创建可能缺失的新表（后 2 张）
-                String[] newTables = {
-                    CREATE_TABLES[5],  // user_building_overrides
-                    CREATE_TABLES[6]   // comment_likes
-                };
-                for (String sql : newTables) {
-                    try { stmt.execute(sql); } catch (Exception ignored) {}
+                // 创建可能缺失的新表
+                for (int i = 5; i < CREATE_TABLES.length; i++) {
+                    try { stmt.execute(CREATE_TABLES[i]); } catch (Exception ignored) {}
                 }
                 System.out.println("[DB] 增量建表完成");
                 return;
@@ -152,39 +148,62 @@ public class DatabaseInitializer {
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE
         )
+        """,
+        // 路径节点
+        """
+        CREATE TABLE IF NOT EXISTS path_nodes (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            lat DOUBLE NOT NULL,
+            lon DOUBLE NOT NULL,
+            name VARCHAR(100),
+            building_id INT,
+            FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE SET NULL
+        )
+        """,
+        // 路径边
+        """
+        CREATE TABLE IF NOT EXISTS path_edges (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            start_node_id INT NOT NULL,
+            end_node_id INT NOT NULL,
+            distance_meters DOUBLE NOT NULL,
+            road_name VARCHAR(100),
+            FOREIGN KEY (start_node_id) REFERENCES path_nodes(id) ON DELETE CASCADE,
+            FOREIGN KEY (end_node_id) REFERENCES path_nodes(id) ON DELETE CASCADE
+        )
         """
     };
 
     // ======================== DML ========================
 
     private static final String[] INSERT_DATA = {
-        // 建筑 24 条
+        // 建筑 24 条（坐标和名称为实际校园数据）
         """
         INSERT IGNORE INTO buildings (id, name, category, latitude, longitude, description) VALUES
-        (1, '鸿远教学楼', 'TEACHING', 34.3750, 108.9100, '渭水校区主教学楼，配备多媒体教室和智慧教室'),
-        (2, '明远教学楼', 'TEACHING', 34.3730, 108.9080, '承担基础课程教学任务，设有大型阶梯教室'),
-        (3, '修远教学楼', 'TEACHING', 34.3740, 108.9120, '文科类教学楼，环境安静'),
-        (4, '图书馆', 'LIBRARY', 34.3710, 108.9110, '校图书馆总馆，藏书丰富，设有自习区'),
-        (5, '树惠园餐厅', 'CANTEEN', 34.3755, 108.9095, '东区学生餐厅，提供多样化的餐饮选择'),
-        (6, '滋兰苑餐厅', 'CANTEEN', 34.3720, 108.9125, '西区学生餐厅，以面食和特色窗口著称'),
-        (7, '小时空餐厅', 'CANTEEN', 34.3745, 108.9130, '教师餐厅，环境优雅，提供自助餐'),
-        (8, '天问餐厅', 'CANTEEN', 34.3760, 108.9105, '西区新餐厅，品种丰富'),
-        (9, '朝晖大学生活动中心', 'OTHER', 34.3725, 108.9090, '学生活动举办地，礼堂可容纳千人'),
-        (10, '长安文化艺术中心', 'OTHER', 34.3715, 108.9130, '艺术展览、演出场地'),
-        (11, '体育场', 'OTHER', 34.3765, 108.9080, '标准田径场，含足球场和看台'),
-        (12, '体育馆', 'OTHER', 34.3770, 108.9090, '室内体育馆，设有篮球场、羽毛球场、乒乓球馆'),
-        (13, '游泳馆', 'OTHER', 34.3760, 108.9070, '室内恒温游泳池'),
-        (14, '1号学生公寓', 'DORM', 34.3757, 108.9108, '东区学生宿舍'),
-        (15, '2号学生公寓', 'DORM', 34.3753, 108.9105, '东区学生宿舍'),
-        (16, '3号学生公寓', 'DORM', 34.3748, 108.9102, '东区学生宿舍'),
-        (17, '4号学生公寓', 'DORM', 34.3723, 108.9118, '西区学生宿舍'),
-        (18, '5号学生公寓', 'DORM', 34.3718, 108.9115, '西区学生宿舍'),
-        (19, '6号学生公寓', 'DORM', 34.3713, 108.9112, '西区学生宿舍'),
-        (20, '校医院', 'OTHER', 34.3700, 108.9090, '提供基础医疗服务和急诊'),
-        (21, '行政楼', 'OTHER', 34.3690, 108.9100, '学校行政办公所在地'),
-        (22, '交通馆', 'TEACHING', 34.3745, 108.9060, '交通运输类专业实验楼'),
-        (23, '信息工程学院实验楼', 'TEACHING', 34.3735, 108.9070, '计算机与信息类实验教学中心'),
-        (24, '汽车试验场', 'OTHER', 34.3780, 108.9050, '车辆工程专业试验场地')
+        (1, '鸿远教学楼', 'TEACHING', 34.369343, 108.895197, '渭水校区主教学楼，配备多媒体教室和智慧教室'),
+        (2, '明远教学楼', 'TEACHING', 34.370813, 108.898437, '承担基础课程教学任务，设有大型阶梯教室'),
+        (3, '修远教学楼', 'TEACHING', 34.371778, 108.897407, '文科类教学楼，环境安静'),
+        (4, '图书馆', 'LIBRARY', 34.372567, 108.899638, '校图书馆总馆，藏书丰富，设有自习区'),
+        (5, '树惠园餐厅', 'CANTEEN', 34.373877, 108.904874, '东区学生餐厅，提供多样化的餐饮选择'),
+        (6, '滋兰苑餐厅', 'CANTEEN', 34.364681, 108.905876, '西区学生餐厅，以面食和特色窗口著称'),
+        (7, '小时空餐厅', 'CANTEEN', 34.370105, 108.890305, '教师餐厅，环境优雅，提供自助餐'),
+        (8, '天行健餐厅', 'CANTEEN', 34.376410, 108.902449, '东区餐厅，品种丰富'),
+        (9, '朝晖大学生活动中心', 'OTHER', 34.373842, 108.905732, '学生活动举办地，礼堂可容纳千人'),
+        (10, '长安文化艺术中心', 'OTHER', 34.373470, 108.905882, '艺术展览、演出场地'),
+        (11, '朝晖体育场', 'OTHER', 34.375666, 108.906633, '标准田径场，含足球场和看台'),
+        (12, '体育馆', 'OTHER', 34.367448, 108.889360, '室内体育馆，设有篮球场、羽毛球场、乒乓球馆'),
+        (13, '游泳馆', 'OTHER', 34.367643, 108.890090, '室内恒温游泳池'),
+        (14, '11号学生公寓', 'DORM', 34.374550, 108.904960, '东区学生宿舍'),
+        (15, '12号学生公寓', 'DORM', 34.375082, 108.904767, '东区学生宿舍'),
+        (16, '3号学生公寓', 'DORM', 34.371079, 108.893008, '东区学生宿舍'),
+        (17, '4号学生公寓', 'DORM', 34.370920, 108.895905, '西区学生宿舍'),
+        (18, '14号学生公寓', 'DORM', 34.374639, 108.906505, '西区学生宿舍'),
+        (19, '15号学生公寓', 'DORM', 34.374214, 108.906676, '西区学生宿舍'),
+        (20, '校医院', 'OTHER', 34.371610, 108.907513, '提供基础医疗服务和急诊'),
+        (21, '行政楼', 'OTHER', 34.364229, 108.907455, '学校行政办公所在地'),
+        (22, '交通馆', 'TEACHING', 34.373063, 108.907599, '交通运输类专业实验楼'),
+        (23, '信息工程学院实验楼', 'TEACHING', 34.373178, 108.896613, '计算机与信息类实验教学中心'),
+        (24, '汽车试验场', 'OTHER', 34.373753, 108.895475, '车辆工程专业试验场地')
         """,
 
         // 用户 3 条（密码均为 "111111" 的 BCrypt 哈希）
