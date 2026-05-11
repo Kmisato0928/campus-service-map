@@ -155,6 +155,11 @@ public class Main extends Application {
     }
 
     public static void main(String[] args) {
+        // 捕获所有未处理的异常
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            System.err.println("=== 未捕获异常 in " + thread.getName() + " ===");
+            throwable.printStackTrace();
+      });
         launch(args);
     }
 }
