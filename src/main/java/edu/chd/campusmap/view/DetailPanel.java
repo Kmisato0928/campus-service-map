@@ -80,7 +80,15 @@ public class DetailPanel extends VBox {
         editBtn.setStyle("-fx-background-color: #2e86c1; -fx-text-fill: white;");
         editBtn.setOnAction(e -> editBuilding());
 
-        HBox infoRow = new HBox(10, categoryLabel, favoriteBtn, editBtn);
+        Button locateBtn = new Button("定位");
+        locateBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white;");
+        locateBtn.setOnAction(e -> {
+            if (currentBuilding != null && mainMapView != null) {
+                mainMapView.animateCenter(currentBuilding.getLatitude(), currentBuilding.getLongitude());
+            }
+        });
+
+        HBox infoRow = new HBox(10, categoryLabel, locateBtn, favoriteBtn, editBtn);
         infoRow.setAlignment(Pos.CENTER_LEFT);
 
         Separator sep1 = new Separator();

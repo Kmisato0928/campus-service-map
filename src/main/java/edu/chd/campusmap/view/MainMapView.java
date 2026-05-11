@@ -24,7 +24,6 @@ public class MainMapView {
     private final Button userCenterBtn = new Button("个人中心");
     private final Button logoutBtn = new Button("退出");
     private final Label userNameLabel = new Label();
-    private BiConsumer<Double, Double> dragPositionCallback;
 
     public MainMapView(MapController mapController, int userId) {
         this.mapController = mapController;
@@ -32,7 +31,7 @@ public class MainMapView {
         this.allBuildings = userId > 0
             ? mapController.getMapService().getAllBuildingsForUser(userId)
                 : mapController.getMapService().getAllBuildings();
-      this.mapRenderer = new CanvasMapRenderer(900, 700);
+      this.mapRenderer = new CanvasMapRenderer();
         initUI();
      registerObserver();
         addAllMarkers();
@@ -71,7 +70,7 @@ public class MainMapView {
     private void registerObserver() {
         mapController.addObserver(building -> {
             statusLabel.setText("已选择: " + building.getName());
-          mapRenderer.setCenter(building.getLatitude(), building.getLongitude());
+            // 不再自动瞬移，由用户通过"定位"按钮平滑移动
         });
     }
 
@@ -97,12 +96,15 @@ public class MainMapView {
     }
 
     public void enterDragMode(int buildingId, BiConsumer<Double, Double> onDrag) {
-        this.dragPositionCallback = onDrag;
-        System.out.println("[MainMapView] 拖动模式暂未实现");
+        mapRenderer.enterDragMode(buildingId, onDrag);
     }
 
     public void exitDragMode() {
-        this.dragPositionCallback = null;
+        mapRenderer.exitDragMode();
+    }
+
+    public void animateCenter(double lat, double lon) {
+        mapRenderer.animateCenter(lat, lon);
     }
 
     public void setUserName(String name) {
