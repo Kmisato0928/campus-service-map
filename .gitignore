@@ -3,4 +3,4 @@
 .claude/
 .cursor/
 target/
-*.exe/
+*.exe
