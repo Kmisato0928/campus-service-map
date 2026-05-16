@@ -24,35 +24,35 @@ public class BuildingMarkerFactory {
     private static class TeachingBuildingMarker implements BuildingMarker {
         @Override
         public String getColorHex() {
-            return "#4682B4";
+            return "#2F6FED";
         }
     }
 
     private static class CanteenMarker implements BuildingMarker {
         @Override
         public String getColorHex() {
-            return "#DC5050";
+            return "#5E84C9";
         }
     }
 
     private static class LibraryMarker implements BuildingMarker {
         @Override
         public String getColorHex() {
-            return "#3CB371";
+            return "#1F4F9E";
         }
     }
 
     private static class DormMarker implements BuildingMarker {
         @Override
         public String getColorHex() {
-            return "#DAA520";
+            return "#7A97C8";
         }
     }
 
     private static class DefaultMarker implements BuildingMarker {
         @Override
         public String getColorHex() {
-            return "#808080";
+            return "#94A8C7";
         }
     }
 }

@@ -4,9 +4,8 @@ import edu.chd.campusmap.controller.UserController;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 
 public class LoginView extends VBox {
     private final UserController userController;
@@ -19,47 +18,62 @@ public class LoginView extends VBox {
     public LoginView(UserController userController) {
         this.userController = userController;
         this.setAlignment(Pos.CENTER);
-        this.setSpacing(15);
-        this.setPadding(new Insets(40));
-        this.setStyle("-fx-background-color: #ecf0f1;");
+        this.setSpacing(0);
+        this.setPadding(new Insets(0));
+        this.getStyleClass().add("auth-shell");
 
-        Label title = new Label("长安大学校园服务地图");
-        title.setFont(Font.font("Microsoft YaHei", FontWeight.BOLD, 24));
-        title.setStyle("-fx-text-fill: #1a5276;");
+        Label formBadge = new Label("账号登录");
+        formBadge.getStyleClass().add("auth-badge");
 
-        Label subtitle = new Label("用户登录");
-        subtitle.setFont(Font.font("Microsoft YaHei", 14));
-        subtitle.setStyle("-fx-text-fill: #566573;");
+        Label brandTitle = new Label("长安大学校园服务地图");
+        brandTitle.getStyleClass().add("auth-hero-title");
+        Label brandSubtitle = new Label("输入账号后即可进入系统。");
+        brandSubtitle.getStyleClass().add("auth-hero-subtitle");
+
+        VBox headerBox = new VBox(8, formBadge, brandTitle, brandSubtitle);
+        headerBox.getStyleClass().add("auth-card-header");
 
         VBox form = new VBox(10);
-        form.setMaxWidth(320);
-        form.setPadding(new Insets(20));
-        form.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 4);");
+        form.getStyleClass().add("auth-form");
 
         Label userLabel = new Label("用户名");
+        userLabel.getStyleClass().add("field-label");
         usernameField = new TextField();
         usernameField.setPromptText("请输入用户名");
 
         Label passLabel = new Label("密码");
+        passLabel.getStyleClass().add("field-label");
         passwordField = new PasswordField();
         passwordField.setPromptText("请输入密码");
 
-        Button loginBtn = new Button("登  录");
+        Button loginBtn = new Button("进入校园地图");
         loginBtn.setMaxWidth(Double.MAX_VALUE);
-        loginBtn.setStyle("-fx-background-color: #2e86c1; -fx-text-fill: white; -fx-font-size: 15px; -fx-padding: 8 0;");
+        loginBtn.getStyleClass().addAll("button", "btn-primary", "btn-lg");
 
         messageLabel = new Label();
-        messageLabel.setStyle("-fx-text-fill: #e74c3c;");
+        messageLabel.getStyleClass().addAll("error-text", "panel-message");
 
         Hyperlink registerLink = new Hyperlink("还没有账号？立即注册");
         registerLink.setAlignment(Pos.CENTER);
+        registerLink.getStyleClass().add("auth-switch-link");
 
-        form.getChildren().addAll(userLabel, usernameField, passLabel, passwordField, loginBtn, messageLabel, registerLink);
+        VBox userGroup = new VBox(6, userLabel, usernameField);
+        VBox passGroup = new VBox(6, passLabel, passwordField);
 
-        this.getChildren().addAll(title, subtitle, form);
+        HBox switchRow = new HBox(8, new Label("第一次使用？"), registerLink);
+        switchRow.getStyleClass().add("auth-switch-row");
+        switchRow.setAlignment(Pos.CENTER);
+
+        form.getChildren().addAll(userGroup, passGroup, loginBtn, messageLabel, switchRow);
+
+        VBox formCard = new VBox(12, headerBox, form);
+        formCard.getStyleClass().addAll("auth-card", "auth-card-compact");
+
+        this.getChildren().add(formCard);
 
         loginBtn.setOnAction(e -> doLogin());
         passwordField.setOnAction(e -> doLogin());
+        usernameField.setOnAction(e -> passwordField.requestFocus());
         registerLink.setOnAction(e -> {
             if (onSwitchToRegister != null) onSwitchToRegister.run();
         });
@@ -75,11 +89,11 @@ public class LoginView extends VBox {
         }
 
         if (userController.login(username, password)) {
-            messageLabel.setStyle("-fx-text-fill: #27ae60;");
+            messageLabel.getStyleClass().setAll("success-text");
             messageLabel.setText("登录成功！");
             if (onLoginSuccess != null) onLoginSuccess.run();
         } else {
-            messageLabel.setStyle("-fx-text-fill: #e74c3c;");
+            messageLabel.getStyleClass().setAll("error-text");
             messageLabel.setText("用户名或密码错误");
         }
     }

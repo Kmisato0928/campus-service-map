@@ -5,14 +5,21 @@ import edu.chd.campusmap.model.Building;
 import edu.chd.campusmap.pattern.factory.BuildingMarkerFactory;
 import edu.chd.campusmap.service.NavigationService;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 import java.util.List;
 import java.util.function.BiConsumer;
 
@@ -23,9 +30,15 @@ public class MainMapView {
     private final NavigationService navigationService;
     private final List<Building> allBuildings;
     private Label statusLabel;
+    private Label statusMetaLabel;
+    private javafx.scene.control.ProgressBar progressBar;
+    private final Button searchPanelBtn = new Button("搜索");
+    private final Button detailPanelBtn = new Button("详情");
+    private final Button routePanelBtn = new Button("路线");
+    private final Button panelToggleBtn = new Button("收起面板");
     private final Button userCenterBtn = new Button("个人中心");
     private final Button logoutBtn = new Button("退出");
-    private final Label userNameLabel = new Label();
+    private final Label userNameLabel = new Label("当前用户");
 
     public MainMapView(MapController mapController, int userId) {
         this.mapController = mapController;
@@ -42,15 +55,26 @@ public class MainMapView {
     }
 
     private void initUI() {
-        statusLabel = new Label("就绪 | 长安大学渭水校区");
-        statusLabel.setStyle("-fx-background-color: #f0f0f0; -fx-padding: 4 10;");
+        root.getStyleClass().add("main-map-root");
+        root.setMinHeight(0); // 确保 BorderPane 在 StackPane 中不被居中裁切
+
+        statusLabel = new Label("就绪 | 渭水校区");
+        statusLabel.getStyleClass().add("top-status-text");
+        statusMetaLabel = new Label("可搜索 " + allBuildings.size() + " 个地点，支持搜索、详情与路线规划");
+        statusMetaLabel.getStyleClass().add("top-status-meta");
+        userNameLabel.getStyleClass().add("top-user-chip");
+
+        progressBar = new javafx.scene.control.ProgressBar(0);
+        progressBar.setVisible(false);
+        progressBar.setPrefWidth(96);
+        progressBar.getStyleClass().add("status-progress");
 
         VBox topBar = createTopBar();
         root.setTop(topBar);
-        root.setCenter(mapRenderer);
-        root.setBottom(statusLabel);
+        root.setCenter(createMapArea());
+        root.setBottom(null);
 
-     mapRenderer.setOnMarkerClick(marker -> {
+        mapRenderer.setOnMarkerClick(marker -> {
             Building building = findBuildingById(marker.id);
          if (building != null) {
                 System.out.println("[Canvas] Marker clicked: " + building.getName());
@@ -62,9 +86,10 @@ public class MainMapView {
     private void addAllMarkers() {
         if (allBuildings.isEmpty()) {
             statusLabel.setText("暂无建筑数据，请检查数据库连接");
-          return;
+            statusMetaLabel.setText("当前没有可展示的校园地点数据");
+            return;
         }
-      for (Building b : allBuildings) {
+        for (Building b : allBuildings) {
             String colorHex = BuildingMarkerFactory.getColorHex(b.getCategory());
             Color color = Color.web(colorHex);
             mapRenderer.addMarker(b.getId(), b.getName(), b.getLatitude(), b.getLongitude(), b.getCategory(), color);
@@ -74,7 +99,8 @@ public class MainMapView {
     private void registerObserver() {
         mapController.addObserver(building -> {
             statusLabel.setText("已选择: " + building.getName());
-            // 不再自动瞬移，由用户通过"定位"按钮平滑移动
+            statusMetaLabel.setText("类别：" + building.getCategory() + " | 可继续查看详情、收藏或规划到此路线");
+            mapRenderer.selectMarker(building.getId());
         });
     }
 
@@ -158,12 +184,37 @@ public class MainMapView {
     }
 
     public void setUserName(String name) {
-        userNameLabel.setText(" | " + name);
+        String displayName = (name == null || name.isBlank()) ? "当前用户" : name;
+        userNameLabel.setText(displayName);
     }
 
     public void setUserControlsVisible(boolean visible) {
+        panelToggleBtn.setVisible(visible);
+        searchPanelBtn.setVisible(visible);
+        detailPanelBtn.setVisible(visible);
+        routePanelBtn.setVisible(visible);
         userCenterBtn.setVisible(visible);
         logoutBtn.setVisible(visible);
+    }
+
+    public void setSidePanelCollapsed(boolean collapsed) {
+        panelToggleBtn.setText(collapsed ? "展开面板" : "收起面板");
+    }
+
+    public Button getPanelToggleBtn() {
+        return panelToggleBtn;
+    }
+
+    public Button getSearchPanelBtn() {
+        return searchPanelBtn;
+    }
+
+    public Button getDetailPanelBtn() {
+        return detailPanelBtn;
+    }
+
+    public Button getRoutePanelBtn() {
+        return routePanelBtn;
     }
 
     public Button getUserCenterBtn() {
@@ -174,11 +225,28 @@ public class MainMapView {
         return logoutBtn;
     }
 
+    public void setActivePanel(String panelKey) {
+        updatePrimaryNavButton(searchPanelBtn, "search".equals(panelKey));
+        updatePrimaryNavButton(detailPanelBtn, "detail".equals(panelKey));
+        updatePrimaryNavButton(routePanelBtn, "route".equals(panelKey));
+    }
+
     private void startOsmImport() {
-        edu.chd.campusmap.util.OverpassImporter.setOnProgress(msg -> statusLabel.setText(msg));
+        edu.chd.campusmap.util.OverpassImporter.setOnProgress(msg -> {
+            javafx.application.Platform.runLater(() -> {
+                statusLabel.setText(msg);
+                if (!progressBar.isVisible()) {
+                    progressBar.setVisible(true);
+                    progressBar.setProgress(-1); // Indeterminate
+                }
+            });
+        });
         edu.chd.campusmap.util.OverpassImporter.setOnComplete(() -> {
-            navigationService.reloadGraph();
-            statusLabel.setText("路网数据已加载，导航可使用真实道路");
+            javafx.application.Platform.runLater(() -> {
+                navigationService.reloadGraph();
+                statusLabel.setText("路网数据已就绪");
+                progressBar.setVisible(false);
+            });
         });
         new Thread(() -> {
             edu.chd.campusmap.util.OverpassImporter.importIfEmpty();
@@ -186,28 +254,130 @@ public class MainMapView {
     }
 
     private VBox createTopBar() {
-        Label title = new Label("长安大学校园服务地图系统");
-        title.setFont(Font.font("Microsoft YaHei", FontWeight.BOLD, 18));
-        title.setStyle("-fx-text-fill: #1a5276;");
+        Node logoNode = createBrandLogo();
 
-      userNameLabel.setStyle("-fx-text-fill: #2c3e50; -fx-font-size: 14;");
+        Label title = new Label("长安大学校园地图");
+        title.getStyleClass().add("top-bar-title");
 
-        userCenterBtn.setStyle("-fx-background-color: #2e86c1; -fx-text-fill: white;");
-        logoutBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white;");
-    userCenterBtn.setVisible(false);
+        HBox statusRow = new HBox(6, statusLabel, progressBar);
+        statusRow.setAlignment(Pos.CENTER_LEFT);
+        statusRow.getStyleClass().add("top-status-row");
+
+        VBox brandCopy = new VBox(2, title, statusRow, statusMetaLabel);
+        brandCopy.getStyleClass().add("top-bar-brand");
+        brandCopy.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(brandCopy, Priority.ALWAYS);
+
+        HBox brandBlock = new HBox(10, logoNode, brandCopy);
+        brandBlock.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(brandBlock, Priority.ALWAYS);
+
+        panelToggleBtn.getStyleClass().addAll("button", "panel-toggle-btn");
+        searchPanelBtn.getStyleClass().addAll("button", "top-action-btn");
+        detailPanelBtn.getStyleClass().addAll("button", "top-action-btn");
+        routePanelBtn.getStyleClass().addAll("button", "top-action-btn");
+        userCenterBtn.getStyleClass().addAll("button", "top-primary-btn");
+        logoutBtn.getStyleClass().addAll("button", "top-logout-btn");
+        panelToggleBtn.setVisible(false);
+        searchPanelBtn.setVisible(false);
+        detailPanelBtn.setVisible(false);
+        routePanelBtn.setVisible(false);
+        userCenterBtn.setVisible(false);
         logoutBtn.setVisible(false);
 
-        HBox topBar = new HBox(10, title, userNameLabel);
-        topBar.setPadding(new Insets(10, 15, 10, 15));
-    topBar.setStyle("-fx-background-color: #d4e6f1; -fx-border-color: #aed6f1; -fx-border-width: 0 0 1 0;");
+        FlowPane actionRow = new FlowPane();
+        actionRow.getChildren().addAll(panelToggleBtn, searchPanelBtn, routePanelBtn, userCenterBtn, logoutBtn);
+        actionRow.getStyleClass().add("top-action-flow");
+        actionRow.setHgap(10);
+        actionRow.setVgap(8);
+        actionRow.setAlignment(Pos.CENTER_RIGHT);
+        HBox.setHgrow(actionRow, Priority.ALWAYS);
 
-        HBox rightBar = new HBox(8, userCenterBtn, logoutBtn);
-        rightBar.setStyle("-fx-alignment: center-right;");
-        HBox.setHgrow(rightBar, javafx.scene.layout.Priority.ALWAYS);
-        topBar.getChildren().add(rightBar);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox topBar = new HBox(10, brandBlock, spacer, actionRow);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.getStyleClass().add("top-bar");
 
         VBox container = new VBox(topBar);
+        container.getStyleClass().add("top-bar-shell");
+        container.setMinHeight(Region.USE_PREF_SIZE);
+        setActivePanel("search");
         return container;
+    }
+
+    private Node createBrandLogo() {
+        StackPane logoWrap = new StackPane();
+        logoWrap.getStyleClass().add("top-brand-logo");
+
+        try {
+            var resource = getClass().getResource("/image/school-badge.png");
+            if (resource != null) {
+                ImageView logoImage = new ImageView(new Image(resource.toExternalForm(), true));
+                logoImage.setFitWidth(120);
+                logoImage.setFitHeight(60);
+                logoImage.setPreserveRatio(true);
+                logoImage.getStyleClass().add("top-brand-logo-image");
+                logoWrap.getChildren().add(logoImage);
+                return logoWrap;
+            }
+        } catch (Exception ignored) {
+        }
+
+        Label fallback = new Label("CHD");
+        fallback.getStyleClass().add("top-brand-logo-fallback");
+        logoWrap.getChildren().add(fallback);
+        return logoWrap;
+    }
+
+    private StackPane createMapArea() {
+        StackPane mapFrame = new StackPane(mapRenderer);
+        mapFrame.getStyleClass().add("map-frame");
+        mapFrame.setMaxWidth(Double.MAX_VALUE);
+        mapFrame.setMaxHeight(Double.MAX_VALUE);
+        mapFrame.setMinHeight(0);
+
+        Button zoomInBtn = new Button("+");
+        zoomInBtn.getStyleClass().addAll("button", "map-control-btn");
+        zoomInBtn.setTooltip(new Tooltip("放大"));
+        zoomInBtn.setOnAction(e -> mapRenderer.setZoom(mapRenderer.getZoom() + 1));
+
+        Button zoomOutBtn = new Button("-");
+        zoomOutBtn.getStyleClass().addAll("button", "map-control-btn");
+        zoomOutBtn.setTooltip(new Tooltip("缩小"));
+        zoomOutBtn.setOnAction(e -> mapRenderer.setZoom(mapRenderer.getZoom() - 1));
+
+        Button resetBtn = new Button("复位");
+        resetBtn.getStyleClass().addAll("button", "map-control-btn", "map-reset-btn");
+        resetBtn.setTooltip(new Tooltip("回到中心点"));
+        resetBtn.setOnAction(e -> mapRenderer.resetView());
+
+        HBox controlCard = new HBox(4, zoomInBtn, zoomOutBtn, resetBtn);
+        controlCard.getStyleClass().add("map-control-card");
+        controlCard.setMaxHeight(Region.USE_PREF_SIZE);
+        controlCard.setMaxWidth(Region.USE_PREF_SIZE);
+        StackPane.setAlignment(controlCard, Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(controlCard, new Insets(0, 24, 32, 0));
+
+        Label mapHint = new Label("拖拽移动 • 滚轮缩放");
+        mapHint.getStyleClass().add("map-hint-chip");
+        StackPane.setAlignment(mapHint, Pos.BOTTOM_LEFT);
+        StackPane.setMargin(mapHint, new Insets(0, 0, 32, 24));
+
+        StackPane mapArea = new StackPane(mapFrame, mapHint, controlCard);
+        mapArea.getStyleClass().add("map-area");
+        mapArea.setMinHeight(0);
+        StackPane.setAlignment(mapFrame, Pos.TOP_LEFT);
+        return mapArea;
+    }
+
+    private void updatePrimaryNavButton(Button button, boolean active) {
+        if (active) {
+            button.getStyleClass().setAll("button", "top-action-btn", "top-nav-btn-active");
+        } else {
+            button.getStyleClass().setAll("button", "top-action-btn", "top-nav-btn");
+        }
     }
 
     public BorderPane getRoot() {

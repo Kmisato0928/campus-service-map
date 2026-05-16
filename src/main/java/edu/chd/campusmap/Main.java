@@ -6,12 +6,22 @@ import edu.chd.campusmap.controller.UserController;
 import edu.chd.campusmap.model.Building;
 import edu.chd.campusmap.model.User;
 import edu.chd.campusmap.util.DatabaseInitializer;
-import edu.chd.campusmap.view.*;
+import edu.chd.campusmap.view.MainMapView;
+import edu.chd.campusmap.view.SearchPanel;
+import edu.chd.campusmap.view.DetailPanel;
+import edu.chd.campusmap.view.NavigationPanel;
+import edu.chd.campusmap.view.LoginView;
+import edu.chd.campusmap.view.RegisterView;
+import edu.chd.campusmap.view.UserCenterView;
 import javafx.application.Application;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.Button;
+import javafx.stage.Stage;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
 
 import java.util.List;
 
@@ -31,6 +41,7 @@ public class Main extends Application {
     private DetailPanel detailPanel;
     private NavigationPanel navigationPanel;
     private StackPane rightPanel;
+    private boolean sidePanelCollapsed;
 
     @Override
     public void start(Stage primaryStage) {
@@ -38,13 +49,24 @@ public class Main extends Application {
         DatabaseInitializer.init();
 
         root = new StackPane();
-        Scene scene = new Scene(root, 1200, 800);
+        Scene scene = new Scene(root, 1160, 700);
         scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
 
         primaryStage.setTitle("长安大学校园服务地图系统");
+        
+        // 替换窗口系统默认图标为长安大学校徽
+        try {
+            java.io.InputStream iconStream = getClass().getResourceAsStream("/image/xh2.png");
+            if (iconStream != null) {
+                primaryStage.getIcons().add(new javafx.scene.image.Image(iconStream));
+            }
+        } catch (Exception e) {
+            System.err.println("图标加载失败: " + e.getMessage());
+        }
+        
         primaryStage.setScene(scene);
-        primaryStage.setMinWidth(900);
-        primaryStage.setMinHeight(600);
+        primaryStage.setMinWidth(980);
+        primaryStage.setMinHeight(620);
 
         // 关闭窗口时确保 JavaFX 退出（清理 tileLoader 等非守护线程）
         primaryStage.setOnCloseRequest(e -> {
@@ -62,7 +84,9 @@ public class Main extends Application {
             loginView.setOnSwitchToRegister(this::showRegisterView);
         }
         loginView.reset();
+        loginView.setOpacity(0);
         root.getChildren().setAll(loginView);
+        edu.chd.campusmap.util.AnimationUtil.fadeIn(loginView).play();
     }
 
     private void showRegisterView() {
@@ -72,24 +96,25 @@ public class Main extends Application {
             registerView.setOnSwitchToLogin(this::showLoginView);
         }
         registerView.reset();
+        registerView.setOpacity(0);
         root.getChildren().setAll(registerView);
+        edu.chd.campusmap.util.AnimationUtil.fadeIn(registerView).play();
     }
 
     private void showMainMap() {
         User currentUser = userController.getCurrentUser();
 
-        mainLayout = new BorderPane();
-
         mainMapView = new MainMapView(mapController, currentUser.getId());
+        mainLayout = mainMapView.getRoot();
+        mainLayout.setMinHeight(0); // 确保整个主布局能够随窗口自由收缩
         searchPanel = new SearchPanel(searchController);
         detailPanel = new DetailPanel();
         navigationPanel = new NavigationPanel();
         detailPanel.setMapView(mainMapView);
 
-        // search → map select
+        // search → map select (selectBuilding 会触发 observer，不必再显式调用 showDetailForBuilding)
         searchPanel.setSearchListener(building -> {
             mapController.selectBuilding(building);
-            showDetailForBuilding(building);
         });
 
         // map marker click → detail
@@ -118,6 +143,7 @@ public class Main extends Application {
                 return;
             }
             mainMapView.showNavigationPath(path);
+            mainMapView.setActivePanel("route");
             double dist = mainMapView.calculateRouteDistance(path);
 
             // 生成步骤列表
@@ -127,7 +153,13 @@ public class Main extends Application {
             steps.add("到达 " + to.getName());
 
             navigationPanel.showRoute(from, to, dist, steps);
-            navigationPanel.setVisible(true);
+            
+            if (!navigationPanel.isVisible()) {
+                navigationPanel.setVisible(true);
+                navigationPanel.setOpacity(0);
+                edu.chd.campusmap.util.AnimationUtil.slideInRight(navigationPanel).play();
+            }
+            
             searchPanel.setVisible(false);
             detailPanel.setVisible(false);
 
@@ -138,54 +170,133 @@ public class Main extends Application {
             Building b = detailPanel.getCurrentBuilding();
             if (b != null) {
                 searchPanel.switchToNavMode(b);
-                searchPanel.setVisible(true);
+                if (!searchPanel.isVisible()) {
+                    searchPanel.setVisible(true);
+                    searchPanel.setOpacity(0);
+                    edu.chd.campusmap.util.AnimationUtil.slideInRight(searchPanel).play();
+                }
                 detailPanel.setVisible(false);
                 navigationPanel.setVisible(false);
+                mainMapView.setActivePanel("route");
             }
         });
 
         navigationPanel.setOnExit(() -> {
             mainMapView.clearNavigation();
             navigationPanel.setVisible(false);
-            searchPanel.setVisible(true);
+            if (!searchPanel.isVisible()) {
+                searchPanel.setVisible(true);
+                searchPanel.setOpacity(0);
+                edu.chd.campusmap.util.AnimationUtil.slideInRight(searchPanel).play();
+            }
             detailPanel.setVisible(false);
         });
 
         navigationPanel.setOnBack(() -> {
             navigationPanel.setVisible(false);
-            searchPanel.setVisible(true);
+            if (!searchPanel.isVisible()) {
+                searchPanel.setVisible(true);
+                searchPanel.setOpacity(0);
+                edu.chd.campusmap.util.AnimationUtil.slideInRight(searchPanel).play();
+            }
             detailPanel.setVisible(false);
         });
 
-        mainLayout.setCenter(mainMapView.getRoot().getCenter());
-        mainLayout.setBottom(mainMapView.getRoot().getBottom());
-        mainLayout.setTop(mainMapView.getRoot().getTop());
-
         // right side: stack search + detail + nav
         rightPanel = new StackPane(searchPanel, detailPanel, navigationPanel);
+        rightPanel.setMinHeight(0);
         mainLayout.setRight(rightPanel);
+        sidePanelCollapsed = false;
 
         // user info & buttons
         mainMapView.setUserName(currentUser.getUsername());
+        mainMapView.getPanelToggleBtn().setOnAction(e -> toggleSidePanel());
+        mainMapView.getSearchPanelBtn().setOnAction(e -> showSearchPanelFromTopNav());
+        mainMapView.getDetailPanelBtn().setOnAction(e -> showDetailPanelFromTopNav());
+        mainMapView.getRoutePanelBtn().setOnAction(e -> showRoutePanelFromTopNav());
         mainMapView.getUserCenterBtn().setOnAction(e -> showUserCenter());
         mainMapView.getLogoutBtn().setOnAction(e -> logout());
         mainMapView.setUserControlsVisible(true);
+        mainMapView.setSidePanelCollapsed(false);
 
         root.getChildren().setAll(mainLayout);
     }
 
     private void showDetailForBuilding(Building building) {
+        ensureSidePanelVisible();
         User user = userController.isLoggedIn() ? userController.getCurrentUser() : null;
         detailPanel.showBuilding(building, user);
-        detailPanel.setVisible(true);
+        mainMapView.setActivePanel("detail");
+        
+        if (!detailPanel.isVisible()) {
+            detailPanel.setVisible(true);
+            detailPanel.setOpacity(0);
+            edu.chd.campusmap.util.AnimationUtil.slideInRight(detailPanel).play();
+        }
+        
         searchPanel.setVisible(false);
         if (navigationPanel != null) navigationPanel.setVisible(false);
     }
 
     private void showSearchPanel() {
-        searchPanel.setVisible(true);
+        ensureSidePanelVisible();
+        if (!searchPanel.isVisible()) {
+            searchPanel.setVisible(true);
+            searchPanel.setOpacity(0);
+            edu.chd.campusmap.util.AnimationUtil.slideInRight(searchPanel).play();
+        }
         detailPanel.setVisible(false);
         if (navigationPanel != null) navigationPanel.setVisible(false);
+        mainMapView.setActivePanel("search");
+    }
+
+    private void showSearchPanelFromTopNav() {
+        searchPanel.switchToSearchMode();
+        showSearchPanel();
+    }
+
+    private void showDetailPanelFromTopNav() {
+        Building building = detailPanel.getCurrentBuilding();
+        if (building == null) {
+            mainMapView.updateStatus("请先从地图或搜索结果中选择一个建筑");
+            showSearchPanelFromTopNav();
+            return;
+        }
+        showDetailForBuilding(building);
+    }
+
+    private void showRoutePanelFromTopNav() {
+        ensureSidePanelVisible();
+        Building building = detailPanel.getCurrentBuilding();
+        searchPanel.switchToNavMode(building);
+        if (!searchPanel.isVisible()) {
+            searchPanel.setVisible(true);
+            searchPanel.setOpacity(0);
+            edu.chd.campusmap.util.AnimationUtil.slideInRight(searchPanel).play();
+        }
+        detailPanel.setVisible(false);
+        if (navigationPanel != null) navigationPanel.setVisible(false);
+        mainMapView.setActivePanel("route");
+        mainMapView.updateStatus(building == null ? "请选择起点和终点后生成路线" : "已带入当前建筑，可继续选择起点生成路线");
+    }
+
+    private void toggleSidePanel() {
+        if (sidePanelCollapsed) {
+            ensureSidePanelVisible();
+            return;
+        }
+        mainLayout.setRight(null);
+        sidePanelCollapsed = true;
+        mainMapView.setSidePanelCollapsed(true);
+    }
+
+    private void ensureSidePanelVisible() {
+        if (!sidePanelCollapsed) {
+            return;
+        }
+        mainLayout.setRight(rightPanel);
+        sidePanelCollapsed = false;
+        mainMapView.setSidePanelCollapsed(false);
     }
 
     private void showUserCenter() {
@@ -196,17 +307,56 @@ public class Main extends Application {
         userCenterView.setOnLogout(this::logout);
         userCenterView.setOnClose(this::showMainMapAfterUserCenter);
 
+        userCenterView.setOpacity(0);
         root.getChildren().setAll(userCenterView);
+        edu.chd.campusmap.util.AnimationUtil.fadeIn(userCenterView).play();
     }
 
     private void showMainMapAfterUserCenter() {
         if (mainLayout != null) {
+            mainLayout.setOpacity(0);
             root.getChildren().setAll(mainLayout);
+            edu.chd.campusmap.util.AnimationUtil.fadeIn(mainLayout).play();
             detailPanel.refresh();
         }
     }
 
     private void logout() {
+        Alert alert = new Alert(Alert.AlertType.WARNING, "\u786e\u5b9a\u8981\u9000\u51fa\u767b\u5f55\u5417\uFF1F");
+        alert.setTitle("\u9000\u51fa\u7cfb\u7edf");
+        alert.setHeaderText("\u9000\u51fa\u767b\u5f55");
+        
+        // 自定义警告图标（橙色感叹号）
+        javafx.scene.shape.SVGPath warningIcon = new javafx.scene.shape.SVGPath();
+        warningIcon.setContent("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z");
+        warningIcon.setFill(javafx.scene.paint.Color.web("#f0a11f"));
+        javafx.scene.layout.StackPane iconPane = new javafx.scene.layout.StackPane(warningIcon);
+        iconPane.setPrefSize(48, 48);
+        warningIcon.setScaleX(1.8);
+        warningIcon.setScaleY(1.8);
+        alert.setGraphic(iconPane);
+
+        // 应用全局样式
+        if (root.getScene() != null) {
+            alert.getDialogPane().getStylesheets().addAll(root.getScene().getStylesheets());
+        }
+        alert.getDialogPane().getStyleClass().add("custom-alert");
+
+        ButtonType confirmBtn = new ButtonType("\u9000\u51fa", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelBtn = new ButtonType("\u53d6\u6d88", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(confirmBtn, cancelBtn);
+
+        Button okBtn = (Button) alert.getDialogPane().lookupButton(confirmBtn);
+        if (okBtn != null) {
+            okBtn.getStyleClass().addAll("button", "btn-danger");
+        }
+        Button cancelBtnNode = (Button) alert.getDialogPane().lookupButton(cancelBtn);
+        if (cancelBtnNode != null) {
+            cancelBtnNode.getStyleClass().addAll("button", "btn-outline");
+        }
+
+        if (alert.showAndWait().orElse(cancelBtn) != confirmBtn) return;
+
         userController.logout();
         showSearchPanel();
         showLoginView();

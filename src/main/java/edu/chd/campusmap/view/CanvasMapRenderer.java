@@ -8,6 +8,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
+import javafx.scene.shape.Rectangle;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -32,13 +33,16 @@ import java.util.function.Consumer;
 public class CanvasMapRenderer extends Pane {
     private static final int TILE_SIZE = 256;
     private static final String TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+    private static final double DEFAULT_CENTER_LAT = 34.3705;
+    private static final double DEFAULT_CENTER_LON = 108.8985;
+    private static final int DEFAULT_ZOOM = 15;
     private static final Path DISK_CACHE = Paths.get(
             System.getProperty("java.io.tmpdir"), "campusmap-tiles");
 
     private final Canvas canvas;
-    private double centerLat = 34.3705;
-    private double centerLon = 108.8985;
-    private int zoom = 15;
+    private double centerLat = DEFAULT_CENTER_LAT;
+    private double centerLon = DEFAULT_CENTER_LON;
+    private int zoom = DEFAULT_ZOOM;
 
     private double offsetX = 0;
     private double offsetY = 0;
@@ -53,6 +57,10 @@ public class CanvasMapRenderer extends Pane {
 
     private double dragStartX, dragStartY;
     private boolean isDragging = false;
+
+    // Building interaction
+    private BuildingMarker hoveredMarker = null;
+    private int selectedMarkerId = -1;
 
     // Building drag mode
     private boolean dragModeActive = false;
@@ -91,6 +99,7 @@ public class CanvasMapRenderer extends Pane {
     public CanvasMapRenderer() {
         this.canvas = new Canvas();
         getChildren().add(canvas);
+        getStyleClass().add("map-canvas-pane");
 
         // 尺寸变化时自动调整 Canvas 缓冲区并重绘
         widthProperty().addListener((obs, o, n) -> {
@@ -102,6 +111,13 @@ public class CanvasMapRenderer extends Pane {
 
         setupMouseHandlers();
         javafx.application.Platform.runLater(this::render);
+
+        // Rectangle clip = new Rectangle();
+        // clip.widthProperty().bind(widthProperty());
+        // clip.heightProperty().bind(heightProperty());
+        // clip.setArcWidth(30);
+        // clip.setArcHeight(30);
+        // setClip(clip);
 
         // 注册 JVM 关闭钩子，确保退出时清理磁盘缓存
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -125,6 +141,15 @@ public class CanvasMapRenderer extends Pane {
     }
 
     private void setupMouseHandlers() {
+        setOnMouseMoved(e -> {
+            BuildingMarker oldHover = hoveredMarker;
+            hoveredMarker = findMarkerAt(e.getX(), e.getY());
+            if (oldHover != hoveredMarker) {
+                render();
+                setCursor(hoveredMarker != null ? javafx.scene.Cursor.HAND : javafx.scene.Cursor.DEFAULT);
+            }
+        });
+
         setOnMousePressed(e -> {
             if (dragModeActive) {
                 BuildingMarker clicked = findMarkerAt(e.getX(), e.getY());
@@ -134,13 +159,15 @@ public class CanvasMapRenderer extends Pane {
                     dragVisualLon = clicked.lon;
                     return;
                 }
-                // In drag mode, clicking on a different marker does nothing;
-                // clicking empty space falls through to allow map panning
             }
 
             BuildingMarker clicked = findMarkerAt(e.getX(), e.getY());
-            if (clicked != null && onMarkerClick != null) {
-                onMarkerClick.accept(clicked);
+            if (clicked != null) {
+                selectedMarkerId = clicked.id;
+                render();
+                if (onMarkerClick != null) {
+                    onMarkerClick.accept(clicked);
+                }
                 return;
             }
             dragStartX = e.getX();
@@ -221,7 +248,7 @@ public class CanvasMapRenderer extends Pane {
         }
 
         GraphicsContext g = gc();
-        g.setFill(Color.web("#f0f0f0"));
+        g.setFill(Color.web("#edf2f8"));
         g.fillRect(0, 0, w, h);
 
         int centerTileX = lon2tile(centerLon, zoom);
@@ -332,14 +359,24 @@ public class CanvasMapRenderer extends Pane {
 
     private void renderMarkers(GraphicsContext g) {
         for (BuildingMarker m : markers) {
-            boolean isTarget = (dragModeActive && m == dragTarget);
+            boolean isTarget = dragModeActive && m.id == dragBuildingId;
+            boolean isSelected = (m.id == selectedMarkerId);
+            boolean isHovered = (m == hoveredMarker);
+            
             double[] screen;
-            if (isTarget) {
+            if (isTarget && dragTarget != null) {
                 screen = latLonToScreen(dragVisualLat, dragVisualLon);
             } else {
                 screen = latLonToScreen(m.lat, m.lon);
             }
             if (screen == null) continue;
+
+            // Highlight ring for selection or hover
+            if (isSelected || isHovered) {
+                g.setFill(Color.rgb(47, 111, 237, isHovered ? 0.18 : 0.12));
+                double pulseSize = isHovered ? 26 : 22;
+                g.fillOval(screen[0] - pulseSize/2, screen[1] - pulseSize/2, pulseSize, pulseSize);
+            }
 
             if (isTarget) {
                 // 正在被拖拽的建筑：红底黄边放大
@@ -349,11 +386,16 @@ public class CanvasMapRenderer extends Pane {
                 g.setLineWidth(3);
                 g.strokeOval(screen[0] - 10, screen[1] - 10, 20, 20);
             } else {
+                double radius = isSelected ? 9 : 7;
+                g.setFill(Color.WHITE);
+                g.fillOval(screen[0] - radius - 3, screen[1] - radius - 3, (radius + 3) * 2, (radius + 3) * 2);
+
                 g.setFill(m.color);
-                g.fillOval(screen[0] - 8, screen[1] - 8, 16, 16);
-                g.setStroke(Color.WHITE);
-                g.setLineWidth(3);
-                g.strokeOval(screen[0] - 8, screen[1] - 8, 16, 16);
+                g.fillOval(screen[0] - radius, screen[1] - radius, radius * 2, radius * 2);
+                
+                g.setStroke(isSelected ? Color.web("#1f4f9e") : Color.web("#d5e1f0"));
+                g.setLineWidth(isSelected ? 3 : 1.5);
+                g.strokeOval(screen[0] - radius, screen[1] - radius, radius * 2, radius * 2);
             }
         }
     }
@@ -492,6 +534,11 @@ public class CanvasMapRenderer extends Pane {
         render();
     }
 
+    public void selectMarker(int id) {
+        this.selectedMarkerId = id;
+        render();
+    }
+
     public boolean isDragModeActive() {
         return dragModeActive;
     }
@@ -543,28 +590,28 @@ public class CanvasMapRenderer extends Pane {
         }
 
         // 半透明背景线
-        g.setStroke(Color.rgb(30, 144, 255, 0.3));
+        g.setStroke(Color.rgb(47, 111, 237, 0.24));
         g.setLineWidth(8);
         g.setLineCap(StrokeLineCap.ROUND);
         g.setLineJoin(StrokeLineJoin.ROUND);
         g.strokePolyline(xs, ys, n);
 
         // 前景主线
-        g.setStroke(Color.rgb(30, 144, 255, 0.9));
+        g.setStroke(Color.rgb(47, 111, 237, 0.92));
         g.setLineWidth(4);
         g.setLineCap(StrokeLineCap.ROUND);
         g.setLineJoin(StrokeLineJoin.ROUND);
         g.strokePolyline(xs, ys, n);
 
         // 起点标记
-        g.setFill(Color.GREEN);
+        g.setFill(Color.web("#2f6fed"));
         g.fillOval(xs[0] - 8, ys[0] - 8, 16, 16);
         g.setStroke(Color.WHITE);
         g.setLineWidth(2);
         g.strokeOval(xs[0] - 8, ys[0] - 8, 16, 16);
 
         // 终点标记
-        g.setFill(Color.RED);
+        g.setFill(Color.web("#1f4f9e"));
         g.fillOval(xs[n - 1] - 8, ys[n - 1] - 8, 16, 16);
         g.setStroke(Color.WHITE);
         g.setLineWidth(2);
@@ -583,6 +630,10 @@ public class CanvasMapRenderer extends Pane {
         render();
     }
 
+    public int getZoom() {
+        return zoom;
+    }
+
     public void setZoom(int zoom) {
         this.zoom = Math.max(1, Math.min(19, zoom));
         this.offsetX = 0;
@@ -590,6 +641,12 @@ public class CanvasMapRenderer extends Pane {
         tileCache.clear();
         pendingLoads.clear();
         render();
+    }
+
+    public void resetView() {
+        centerLat = DEFAULT_CENTER_LAT;
+        centerLon = DEFAULT_CENTER_LON;
+        setZoom(DEFAULT_ZOOM);
     }
 
     private double tile2lon(double x, int zoom) {

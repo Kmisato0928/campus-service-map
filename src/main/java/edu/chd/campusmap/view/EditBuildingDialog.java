@@ -1,18 +1,17 @@
 package edu.chd.campusmap.view;
 
-import edu.chd.campusmap.model.Building;
-import edu.chd.campusmap.model.BuildingOverride;
-import edu.chd.campusmap.service.MapService;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -28,10 +27,10 @@ public class EditBuildingDialog extends Stage {
         CATEGORIES.put("OTHER", "其他");
     }
 
-    private final Building building;
+    private final edu.chd.campusmap.model.Building building;
     private final int userId;
     private final boolean isAdmin;
-    private final MapService mapService;
+    private final edu.chd.campusmap.service.MapService mapService;
     private final MainMapView mapView;
     private final TextField nameField;
     private final ComboBox<String> categoryBox;
@@ -43,91 +42,153 @@ public class EditBuildingDialog extends Stage {
     private Runnable onSaved;
     private boolean saved = false;
 
-    public EditBuildingDialog(Building building, int userId, boolean isAdmin, MainMapView mapView) {
+    public EditBuildingDialog(edu.chd.campusmap.model.Building building, int userId, boolean isAdmin, MainMapView mapView) {
         this.building = building;
         this.userId = userId;
         this.isAdmin = isAdmin;
         this.mapView = mapView;
-        this.mapService = new MapService();
+        this.mapService = new edu.chd.campusmap.service.MapService();
 
         initModality(Modality.NONE);
+        Window owner = mapView.getRoot().getScene() != null ? mapView.getRoot().getScene().getWindow() : null;
+        if (owner != null) {
+            initOwner(owner);
+        }
         setTitle("编辑建筑信息 - " + building.getName());
-        setMinWidth(420);
-        setMinHeight(420);
 
         VBox root = new VBox(12);
-        root.setPadding(new Insets(20));
-        root.setStyle("-fx-background-color: #f8f9fa;");
+        root.getStyleClass().addAll("root", "dialog-container");
+        root.setPadding(new Insets(18));
 
         Label titleLabel = new Label("编辑建筑信息");
-        titleLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #1a5276;");
+        titleLabel.getStyleClass().add("title-label");
+        Label subtitleLabel = new Label("调整名称、类别、坐标和说明，保存后会立即同步到当前详情页。");
+        subtitleLabel.getStyleClass().add("dialog-subtitle");
 
         roleHint = new Label();
-        roleHint.setStyle("-fx-font-size: 12; -fx-text-fill: " + (isAdmin ? "#27ae60" : "#e67e22") + ";");
+        roleHint.getStyleClass().add(isAdmin ? "role-admin" : "role-user");
         if (isAdmin) {
             roleHint.setText("管理员模式：修改将全局生效");
         } else {
             roleHint.setText("个人模式：修改仅自己可见");
         }
 
+        Label buildingChip = new Label("当前建筑：" + building.getName());
+        buildingChip.getStyleClass().add("meta-chip");
+        HBox chipRow = new HBox(10, buildingChip, roleHint);
+
+        VBox headerBox = new VBox(8, titleLabel, subtitleLabel, chipRow);
+        headerBox.getStyleClass().add("dialog-header");
+
         // 拖动提示
-        Label dragHint = new Label("提示：地图上的标记已变为红色可拖动状态，拖动后坐标自动更新");
-        dragHint.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 12; -fx-font-weight: bold; -fx-background-color: #fdedec; -fx-padding: 6 10; -fx-border-radius: 4; -fx-background-radius: 4;");
+        Label dragHint = new Label("拖动地图高亮标记可自动回填坐标，也支持手动修改经纬度。");
+        dragHint.getStyleClass().add("hint-banner");
+        dragHint.setWrapText(true);
 
-        GridPane form = new GridPane();
-        form.setHgap(10);
-        form.setVgap(8);
-        form.setPadding(new Insets(10, 0, 10, 0));
-
-        form.add(new Label("名称:"), 0, 0);
+        Label nameLabel = new Label("名称");
+        nameLabel.getStyleClass().add("field-label");
         nameField = new TextField(building.getName());
-        nameField.setPrefWidth(260);
-        form.add(nameField, 1, 0);
+        nameField.setPromptText("请输入建筑名称");
 
-        form.add(new Label("类别:"), 0, 1);
+        Label catLabel = new Label("类别");
+        catLabel.getStyleClass().add("field-label");
         categoryBox = new ComboBox<>();
         categoryBox.getItems().addAll(CATEGORIES.values());
         String currentCat = CATEGORIES.getOrDefault(building.getCategory(), "其他");
         categoryBox.setValue(currentCat);
-        categoryBox.setPrefWidth(260);
-        form.add(categoryBox, 1, 1);
+        categoryBox.setMaxWidth(Double.MAX_VALUE);
 
-        form.add(new Label("纬度:"), 0, 2);
+        Label latLabel = new Label("纬度");
+        latLabel.getStyleClass().add("field-label");
         latField = new TextField(String.valueOf(building.getLatitude()));
+        latField.setPromptText("例如 34.123456");
         latField.setEditable(true);
-        form.add(latField, 1, 2);
 
-        form.add(new Label("经度:"), 0, 3);
+        Label lngLabel = new Label("经度");
+        lngLabel.getStyleClass().add("field-label");
         lngField = new TextField(String.valueOf(building.getLongitude()));
+        lngField.setPromptText("例如 108.123456");
         lngField.setEditable(true);
-        form.add(lngField, 1, 3);
 
-        form.add(new Label("描述:"), 0, 4);
+        Label formTitle = new Label("基础设置");
+        formTitle.getStyleClass().add("section-caption");
+        Label formHint = new Label("上半部分可直接完成名称、类别与坐标修改。");
+        formHint.getStyleClass().add("muted-text");
+
+        GridPane formGrid = new GridPane();
+        formGrid.getStyleClass().add("dialog-form-grid");
+        formGrid.add(nameLabel, 0, 0);
+        formGrid.add(nameField, 0, 1);
+        formGrid.add(catLabel, 1, 0);
+        formGrid.add(categoryBox, 1, 1);
+        formGrid.add(latLabel, 0, 2);
+        formGrid.add(latField, 0, 3);
+        formGrid.add(lngLabel, 1, 2);
+        formGrid.add(lngField, 1, 3);
+        GridPane.setHgrow(nameField, Priority.ALWAYS);
+        GridPane.setHgrow(categoryBox, Priority.ALWAYS);
+        GridPane.setHgrow(latField, Priority.ALWAYS);
+        GridPane.setHgrow(lngField, Priority.ALWAYS);
+
+        VBox formCard = new VBox(8, formTitle, formHint, formGrid);
+        formCard.getStyleClass().addAll("section-card", "section-card-emphasis", "dialog-section");
+
+        Label descLabel = new Label("描述");
+        descLabel.getStyleClass().add("field-label");
         descArea = new TextArea(building.getDescription());
+        descArea.setPromptText("补充建筑用途、开放信息、位置特征等内容");
         descArea.setPrefRowCount(3);
-        descArea.setPrefWidth(260);
-        form.add(descArea, 1, 4);
+        descArea.setWrapText(true);
+
+        Label descTitle = new Label("文字说明");
+        descTitle.getStyleClass().add("section-caption");
+        Label descHint = new Label("这段文字会直接出现在详情页。");
+        descHint.getStyleClass().add("muted-text");
+        VBox descCard = new VBox(8, descTitle, descHint, descLabel, descArea);
+        descCard.getStyleClass().addAll("section-card", "dialog-section");
 
         Button saveBtn = new Button("保存");
-        saveBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 14px;");
+        saveBtn.getStyleClass().addAll("button", "btn-primary", "btn-lg");
         saveBtn.setOnAction(e -> save());
 
         Button cancelBtn = new Button("取消");
-        cancelBtn.setStyle("-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-font-size: 14px;");
+        cancelBtn.getStyleClass().addAll("button", "btn-outline");
         cancelBtn.setOnAction(e -> {
             mapView.exitDragMode();
             close();
         });
 
-        HBox btnRow = new HBox(10, saveBtn, cancelBtn);
-        btnRow.setAlignment(Pos.CENTER);
+        Button closeOnlyBtn = new Button("稍后再改");
+        closeOnlyBtn.getStyleClass().addAll("button", "btn-ghost");
+        closeOnlyBtn.setOnAction(e -> {
+            mapView.exitDragMode();
+            close();
+        });
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox btnRow = new HBox(10, closeOnlyBtn, spacer, cancelBtn, saveBtn);
+        btnRow.getStyleClass().add("dialog-actions");
 
         msgLabel = new Label();
-        msgLabel.setStyle("-fx-text-fill: #27ae60;");
+        msgLabel.getStyleClass().addAll("panel-message", "muted-text");
+        msgLabel.setText("保存前可先拖动地图标记，坐标会自动更新。");
+        msgLabel.setWrapText(true);
 
-        root.getChildren().addAll(titleLabel, roleHint, dragHint, form, btnRow, msgLabel);
+        root.getChildren().addAll(headerBox, dragHint, formCard, descCard, btnRow, msgLabel);
         Scene scene = new Scene(root);
+        String stylesheet = getClass().getResource("/css/style.css").toExternalForm();
+        scene.getStylesheets().add(stylesheet);
+        if (owner != null && owner.getScene() != null && owner.getScene().getRoot().getStyleClass().contains("dark-mode")) {
+            root.getStyleClass().add("dark-mode");
+        }
         setScene(scene);
+        setMinWidth(430);
+        setMinHeight(440);
+        setWidth(680);
+        setHeight(500);
+        sizeToScene();
+        setResizable(true);
 
         // 关闭时退出拖动模式
         setOnCloseRequest(e -> mapView.exitDragMode());
@@ -144,7 +205,7 @@ public class EditBuildingDialog extends Stage {
     private void save() {
         String name = nameField.getText().trim();
         if (name.isEmpty()) {
-            msgLabel.setStyle("-fx-text-fill: #e74c3c;");
+            msgLabel.getStyleClass().setAll("panel-message", "error-text");
             msgLabel.setText("名称不能为空");
             return;
         }
@@ -160,13 +221,13 @@ public class EditBuildingDialog extends Stage {
             lat = Double.parseDouble(latField.getText().trim());
             lng = Double.parseDouble(lngField.getText().trim());
         } catch (NumberFormatException e) {
-            msgLabel.setStyle("-fx-text-fill: #e74c3c;");
+            msgLabel.getStyleClass().setAll("panel-message", "error-text");
             msgLabel.setText("纬度和经度必须是有效数字");
             return;
         }
 
         if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-            msgLabel.setStyle("-fx-text-fill: #e74c3c;");
+            msgLabel.getStyleClass().setAll("panel-message", "error-text");
             msgLabel.setText("经纬度范围无效（纬度: -90~90, 经度: -180~180）");
             return;
         }
@@ -190,7 +251,7 @@ public class EditBuildingDialog extends Stage {
             }
         } else {
             // 普通用户：保存到个人覆盖表（仅自己可见）
-            BuildingOverride override = new BuildingOverride(
+            edu.chd.campusmap.model.BuildingOverride override = new edu.chd.campusmap.model.BuildingOverride(
                     userId, building.getId(), name, category, lat, lng, description);
             ok = mapService.saveUserOverride(override);
             // 更新当前 building 对象以便 UI 即时刷新
@@ -205,7 +266,7 @@ public class EditBuildingDialog extends Stage {
 
         if (ok) {
             saved = true;
-            msgLabel.setStyle("-fx-text-fill: #27ae60;");
+            msgLabel.getStyleClass().setAll("panel-message", "success-text");
             msgLabel.setText("保存成功");
             mapView.exitDragMode();
             close();
@@ -213,7 +274,7 @@ public class EditBuildingDialog extends Stage {
                 Platform.runLater(onSaved);
             }
         } else {
-            msgLabel.setStyle("-fx-text-fill: #e74c3c;");
+            msgLabel.getStyleClass().setAll("panel-message", "error-text");
             msgLabel.setText("保存失败，请重试");
         }
     }

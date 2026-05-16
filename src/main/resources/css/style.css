@@ -1,44 +1,1277 @@
+/* ==========================================================
+   长安大学校园服务地图 - 全局设计系统
+   目标：统一颜色语义、控件层级、卡片结构与交互反馈
+   ========================================================== */
+
+/* ==================== 设计令牌 ==================== */
 .root {
-    -fx-font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
-    -fx-base: #f0f0f0;
+    -fx-font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+    -fx-font-size: 14px;
+
+    -color-bg: #eef2f7;
+    -color-bg-soft: #f4f6f9;
+    -color-surface: #ffffff;
+    -color-surface-muted: #f3f5f8;
+    -color-surface-strong: #e8edf5;
+
+    -color-border: #d7dee8;
+    -color-border-strong: #b8c5d6;
+    -color-divider: #e3e8ef;
+
+    -color-text: #111827; /* 更深的文字颜色，增强对比度 */
+    -color-text-soft: #4b5563;
+    -color-text-muted: #6b7280;
+    -color-text-inverse: #ffffff;
+
+    -color-primary: #1e40af; /* 稍微加深主色调，更显正式 */
+    -color-primary-hover: #194d9b;
+    -color-primary-soft: #e8f0fb;
+
+    -color-success: #2d7bb0;
+    -color-success-hover: #246591;
+    -color-success-soft: #eaf4fb;
+
+    -color-warning: #f0a11f;
+    -color-warning-hover: #d88708;
+    -color-warning-soft: #fff6df;
+
+    -color-danger: #c85a5a;
+    -color-danger-hover: #a84a4a;
+    -color-danger-soft: #fbefef;
+
+    -color-shadow: rgba(29, 54, 92, 0.10);
+    -color-shadow-strong: rgba(29, 54, 92, 0.16);
+
+    -fx-base: -color-bg;
+    -fx-background-color: -color-bg;
 }
 
+.root.dark-mode {
+    -color-bg: #1e1e24;
+    -color-bg-soft: #25262c;
+    -color-surface: #2b2c33;
+    -color-surface-muted: #2d2e36;
+    -color-surface-strong: #33343d;
+
+    -color-border: #444652;
+    -color-border-strong: #5a5c6b;
+    -color-divider: #383a45;
+
+    -color-text: #e6e6e6;
+    -color-text-soft: #a8b2c1;
+    -color-text-muted: #747d8f;
+    -color-text-inverse: #ffffff;
+
+    -color-primary: #478bff;
+    -color-primary-hover: #5d98ff;
+    -color-primary-soft: #273e6b;
+
+    -color-success: #1bb581;
+    -color-success-hover: #26c992;
+    -color-success-soft: #184235;
+
+    -color-warning: #f8b33b;
+    -color-warning-hover: #fcc259;
+    -color-warning-soft: #5e4111;
+
+    -color-danger: #f26b6b;
+    -color-danger-hover: #fa8080;
+    -color-danger-soft: #632b2b;
+
+    -color-shadow: rgba(0, 0, 0, 0.40);
+    -color-shadow-strong: rgba(0, 0, 0, 0.60);
+
+    -fx-base: -color-bg;
+    -fx-background-color: -color-bg;
+}
+
+/* 适配地图画版的深色模式滤镜（让亮色地图变暗变灰） */
+.root.dark-mode .map-canvas-pane {
+    -fx-effect: coloradjust(0, -0.4, -0.6, 0.1);
+}
+
+/* ==================== 对话框与 Alert ==================== */
+.custom-alert {
+    -fx-background-color: -color-surface;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, -color-shadow, 20, 0.18, 0, 6);
+}
+
+.custom-alert > *.header-panel {
+    -fx-background-color: -color-surface;
+    -fx-padding: 16 20 8 20;
+}
+
+.custom-alert > *.header-panel *.header-panel-text {
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -color-text;
+}
+
+.custom-alert > *.content.label {
+    -fx-font-size: 14px;
+    -fx-text-fill: -color-text-soft;
+    -fx-padding: 8 20 16 20;
+    -fx-line-spacing: 6px;
+}
+
+.custom-alert > *.button-bar {
+    -fx-background-color: transparent;
+    -fx-padding: 12 20 20 20;
+}
+
+/* 统一弹窗内按钮样式 */
+.custom-alert .button {
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 8 24;
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+}
+
+/* ==================== 容器与卡片 ==================== */
+.card-panel {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 16px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 16px;
+    -fx-effect: dropshadow(gaussian, -color-shadow, 20, 0.18, 0, 6);
+}
+
+.side-panel {
+    -fx-background-color: -color-surface-muted;
+    -fx-border-color: -color-border;
+    -fx-border-width: 0 0 0 1;
+    -fx-padding: 12 16;
+    -fx-spacing: 12;
+}
+
+.map-area {
+    -fx-padding: 0;
+}
+
+.map-frame {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-radius: 0;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+}
+
+.map-canvas-pane {
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}
+
+.top-bar-shell {
+    -fx-background-color: -color-surface;
+    -fx-padding: 0;
+    -fx-border-color: -color-border;
+    -fx-border-width: 0 0 1 0;
+}
+
+.top-bar {
+    -fx-background-color: transparent;
+    -fx-padding: 8 16;
+    -fx-spacing: 12;
+}
+
+.top-bar-brand {
+    -fx-max-width: 380px;
+    -fx-spacing: 0;
+}
+
+.top-brand-logo {
+    -fx-background-color: transparent;
+    -fx-min-width: 120px;
+    -fx-min-height: 60px;
+    -fx-padding: 0;
+    -fx-alignment: center;
+}
+
+.top-brand-logo-image {
+    -fx-smooth: true;
+}
+
+.top-brand-logo-fallback {
+    -fx-text-fill: -color-primary;
+    -fx-font-size: 16px;
+    -fx-font-weight: 800;
+}
+
+.top-nav-group {
+    -fx-alignment: center-right;
+    -fx-spacing: 8;
+}
+
+.top-action-flow {
+    -fx-alignment: center-right;
+}
+
+.top-action-btn {
+    -fx-background-color: #6388D8;
+    -fx-text-fill: #0F2452;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 9 20;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-effect: none;
+}
+
+.top-action-btn:hover {
+    -fx-background-color: #5176CA;
+    -fx-text-fill: #0A1938;
+    -fx-border-color: transparent;
+}
+
+.top-primary-btn {
+    -fx-background-color: #163A96;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 9 20;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-effect: dropshadow(gaussian, rgba(22, 58, 150, 0.3), 6, 0, 0, 2);
+}
+
+.top-primary-btn:hover {
+    -fx-background-color: #112C75;
+}
+
+.panel-toggle-btn {
+    -fx-background-color: #6388D8;
+    -fx-text-fill: #0F2452;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 9 20;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-effect: none;
+}
+
+.panel-toggle-btn:hover {
+    -fx-background-color: #5176CA;
+    -fx-text-fill: #0A1938;
+}
+
+.top-logout-btn {
+    -fx-background-color: #E65A5A;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 9 20;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-effect: none;
+}
+
+.top-logout-btn:hover {
+    -fx-background-color: #CC4B4B;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: transparent;
+}
+
+.top-status-row {
+    -fx-alignment: center-left;
+    -fx-spacing: 8;
+}
+
+.top-campus-label {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+    -fx-padding: 0;
+}
+
+.top-status-text {
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+}
+
+.top-status-meta {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 12px;
+}
+
+.top-nav-btn-active {
+    -fx-background-color: #4F75CA;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 9 20;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 4, 0, 0, 2);
+}
+
+.top-nav-btn-active:hover {
+    -fx-background-color: #3D62B3;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: transparent;
+}
+
+.top-nav-btn {
+    -fx-background-color: #6388D8;
+    -fx-text-fill: #0F2452;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 9 20;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-effect: none;
+}
+
+.top-nav-btn:hover {
+    -fx-background-color: #5176CA;
+    -fx-text-fill: #0A1938;
+    -fx-border-color: transparent;
+}
+
+.top-user-chip {
+    -fx-background-color: -color-surface-strong;
+    -fx-background-radius: 999px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+    -fx-padding: 6 14;
+    -fx-font-size: 12px;
+    -fx-text-fill: -color-text;
+    -fx-font-weight: 700;
+}
+
+.status-progress {
+    -fx-pref-width: 90px;
+}
+
+/* 进度条样式 */
+.progress-bar {
+    -fx-indeterminate-bar-length: 60;
+    -fx-indeterminate-bar-escape: true;
+    -fx-indeterminate-bar-flip: true;
+    -fx-indeterminate-bar-animation-delay: 0.0;
+}
+
+.progress-bar > .track {
+    -fx-background-color: -color-surface-muted;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.progress-bar > .bar {
+    -fx-background-color: -color-primary;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.toolbar-flat {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-border-width: 0;
+}
+
+.panel-header {
+    -fx-padding: 2 2 8 2;
+    -fx-spacing: 6;
+}
+
+.panel-subtitle {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 12px;
+    -fx-line-spacing: 2px;
+}
+
+.side-header-card {
+    -fx-background-color: transparent;
+    -fx-background-radius: 12px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 12px;
+    -fx-border-width: 1px;
+    -fx-padding: 10 12;
+    -fx-spacing: 8;
+    -fx-alignment: center-left;
+}
+
+.side-header-copy {
+    -fx-spacing: 4;
+}
+
+.side-header-badge {
+    -fx-background-color: -color-primary-soft;
+    -fx-background-radius: 999px;
+    -fx-border-color: -color-border-strong;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+    -fx-padding: 4 10;
+    -fx-text-fill: -color-primary-hover;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.side-header-title {
+    -fx-font-size: 19px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -color-text;
+    -fx-letter-spacing: 0.3px;
+}
+
+.side-header-subtitle {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 12px;
+    -fx-line-spacing: 3px;
+}
+
+.section-card {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 12px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 12px;
+    -fx-border-width: 1px;
+    -fx-padding: 14;
+    -fx-spacing: 10;
+}
+
+.section-card-emphasis {
+    -fx-background-color: derive(-color-primary-soft, 35%);
+    -fx-border-color: -color-border-strong;
+}
+
+.section-caption {
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+}
+
+.field-label {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}
+
+.meta-chip {
+    -fx-background-color: -color-primary-soft;
+    -fx-background-radius: 999px;
+    -fx-border-color: -color-primary-soft;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+    -fx-padding: 4 10;
+    -fx-text-fill: -color-primary;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.success-chip {
+    -fx-background-color: -color-success-soft;
+    -fx-background-radius: 999px;
+    -fx-border-color: -color-success-soft;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+    -fx-padding: 4 10;
+    -fx-text-fill: -color-success;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.panel-actions {
+    -fx-hgap: 8;
+    -fx-vgap: 8;
+}
+
+.panel-message {
+    -fx-font-size: 12px;
+    -fx-wrap-text: true;
+}
+
+/* ==================== 弹窗与对话框 ==================== */
+.dialog-container {
+    -fx-background-color: -color-surface;
+    -fx-padding: 24;
+    -fx-spacing: 16;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 30, 0, 0, 10);
+}
+
+.dialog-header {
+    -fx-spacing: 6;
+    -fx-padding: 0 0 4 0;
+}
+
+.dialog-subtitle {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 13px;
+    -fx-line-spacing: 2px;
+}
+
+.dialog-section {
+    -fx-spacing: 8;
+}
+
+.dialog-form-grid {
+    -fx-hgap: 12;
+    -fx-vgap: 8;
+}
+
+.dialog-actions {
+    -fx-spacing: 10;
+    -fx-padding: 8 0 0 0;
+    -fx-alignment: center-right;
+}
+
+.auth-shell {
+    -fx-alignment: center;
+    -fx-spacing: 20;
+    -fx-padding: 32;
+}
+
+.auth-content {
+    -fx-alignment: center;
+    -fx-spacing: 28;
+    -fx-max-width: 1120px;
+}
+
+.auth-card-header {
+    -fx-spacing: 6;
+}
+
+.auth-hero {
+    -fx-background-color:
+        linear-gradient(to bottom right, -color-primary-soft 0%, -color-surface-muted 100%);
+    -fx-background-radius: 20px;
+    -fx-border-color: -color-border-strong;
+    -fx-border-radius: 20px;
+    -fx-border-width: 1px;
+    -fx-padding: 26;
+    -fx-spacing: 12;
+    -fx-pref-width: 420px;
+    -fx-effect: dropshadow(gaussian, -color-shadow, 20, 0.18, 0, 6);
+}
+
+.auth-hero-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text;
+}
+
+.auth-hero-subtitle {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 13px;
+    -fx-line-spacing: 2px;
+}
+
+.auth-badge {
+    -fx-background-color: -color-primary-soft;
+    -fx-background-radius: 999px;
+    -fx-border-color: -color-border-strong;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+    -fx-padding: 5 12;
+    -fx-text-fill: -color-primary-hover;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}
+
+.auth-note {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 13px;
+    -fx-line-spacing: 3px;
+}
+
+.auth-feature-list {
+    -fx-spacing: 12;
+}
+
+.auth-feature-item {
+    -fx-background-color: rgba(255, 255, 255, 0.55);
+    -fx-background-radius: 14px;
+    -fx-padding: 12 14;
+    -fx-alignment: top-left;
+}
+
+.root.dark-mode .auth-feature-item {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+}
+
+.auth-feature-index {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 999px;
+    -fx-min-width: 30px;
+    -fx-min-height: 30px;
+    -fx-alignment: center;
+    -fx-text-alignment: center;
+    -fx-text-fill: -color-primary-hover;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 6;
+}
+
+.auth-mini-card {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 14px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 14px;
+    -fx-border-width: 1px;
+    -fx-padding: 12 14;
+    -fx-spacing: 4;
+}
+
+.auth-card {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 20px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 20px;
+    -fx-border-width: 1px;
+    -fx-padding: 24;
+    -fx-spacing: 10;
+    -fx-pref-width: 390px;
+    -fx-effect: dropshadow(gaussian, -color-shadow, 22, 0.18, 0, 8);
+}
+
+.auth-card-compact {
+    -fx-pref-width: 430px;
+    -fx-max-width: 430px;
+    -fx-padding: 24;
+    -fx-spacing: 12;
+}
+
+.auth-card-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text;
+}
+
+.auth-card-subtitle {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 13px;
+}
+
+.auth-form {
+    -fx-spacing: 10;
+}
+
+.auth-mini-row {
+    -fx-spacing: 12;
+}
+
+.auth-form .hyperlink {
+    -fx-padding: 4 0 0 0;
+}
+
+.auth-inline-card {
+    -fx-background-color: -color-surface-muted;
+    -fx-background-radius: 12px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 12px;
+    -fx-padding: 10 12;
+    -fx-spacing: 4;
+}
+
+.auth-switch-row {
+    -fx-padding: 4 0 0 0;
+}
+
+.auth-switch-link {
+    -fx-font-weight: 700;
+}
+
+.dashboard-shell {
+    -fx-padding: 22;
+    -fx-background-color: transparent;
+}
+
+.dashboard-header {
+    -fx-background-color:
+        linear-gradient(to right, -color-surface 0%, -color-surface-muted 100%);
+    -fx-background-radius: 18px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 18px;
+    -fx-border-width: 1px;
+    -fx-padding: 22;
+    -fx-spacing: 14;
+    -fx-effect: dropshadow(gaussian, -color-shadow, 18, 0.16, 0, 5);
+}
+
+.dashboard-hero-copy {
+    -fx-spacing: 8;
+}
+
+.dashboard-hero-title {
+    -fx-font-size: 28px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -color-text;
+}
+
+.dashboard-hero-subtitle {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 13px;
+}
+
+.dashboard-header-actions {
+    -fx-alignment: center-right;
+    -fx-spacing: 10;
+}
+
+.dashboard-header-actions .button {
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 8 16;
+}
+
+.dashboard-stat-row {
+    -fx-spacing: 14;
+}
+
+.dashboard-stat-card {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 12px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 12px;
+    -fx-border-width: 1px;
+    -fx-padding: 18 20;
+    -fx-spacing: 6;
+    -fx-alignment: center-left;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.05), 6, 0, 0, 2);
+}
+
+.dashboard-stat-title {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+}
+
+.dashboard-stat-value {
+    -fx-font-size: 26px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -color-primary;
+}
+
+.dashboard-grid {
+    -fx-spacing: 20;
+}
+
+.dashboard-panel {
+    -fx-padding: 20;
+    -fx-spacing: 12;
+}
+
+.dashboard-panel-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text;
+}
+
+.dashboard-panel-subtitle {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 12px;
+}
+
+.dashboard-meta-row {
+    -fx-spacing: 10;
+}
+
+/* ==================== 文本与标签 ==================== */
+.label {
+    -fx-text-fill: -color-text;
+}
+
+.title-label {
+    -fx-font-size: 25px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text;
+}
+
+.subtitle-label {
+    -fx-font-size: 14px;
+    -fx-text-fill: -color-text-soft;
+}
+
+.heading-label {
+    -fx-font-size: 17px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text;
+}
+
+.section-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text;
+}
+
+.info-label {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 13px;
+    -fx-line-spacing: 2px;
+}
+
+.top-bar-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: 900;
+    -fx-text-fill: -color-text;
+    -fx-letter-spacing: 0.5px;
+}
+
+.success-text {
+    -fx-text-fill: -color-success;
+}
+
+.error-text {
+    -fx-text-fill: -color-danger;
+}
+
+.muted-text {
+    -fx-text-fill: -color-text-muted;
+    -fx-font-size: 11px;
+}
+
+/* ==================== 按钮 ==================== */
 .button {
     -fx-cursor: hand;
-    -fx-background-radius: 4;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-padding: 8 14;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-text-fill: -color-text-inverse;
+    -fx-alignment: center;
+    -fx-border-width: 0;
+    -fx-effect: dropshadow(gaussian, -color-shadow, 8, 0.08, 0, 2);
 }
 
 .button:hover {
+    -fx-opacity: 0.92;
+    -fx-effect: dropshadow(gaussian, -color-shadow-strong, 12, 0.14, 0, 3);
+}
+
+.button:pressed {
     -fx-opacity: 0.85;
+    -fx-translate-y: 1px;
+    -fx-effect: none;
 }
 
-.text-field {
-    -fx-background-radius: 4;
-    -fx-border-radius: 4;
-    -fx-border-color: #ced4da;
-    -fx-padding: 6 10;
+/* 按钮尺寸扩展 */
+.btn-lg {
+    -fx-padding: 10 20;
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
 }
 
-.combo-box {
-    -fx-background-radius: 4;
-    -fx-border-radius: 4;
+.btn-sm {
+    -fx-padding: 7 14;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
 }
 
-.list-view {
-    -fx-background-radius: 4;
-    -fx-border-radius: 4;
-    -fx-border-color: #dee2e6;
+.btn-round {
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
 }
 
-.list-cell:filled:selected {
-    -fx-background-color: #2e86c1;
+/* 按钮颜色扩展 */
+.btn-primary {
+    -fx-background-color: -color-primary;
     -fx-text-fill: white;
 }
 
+.btn-primary:hover {
+    -fx-background-color: -color-primary-hover;
+}
+
+.btn-success {
+    -fx-background-color: -color-success;
+}
+
+.btn-success:hover {
+    -fx-background-color: -color-success-hover;
+}
+
+.btn-danger {
+    -fx-background-color: -color-danger;
+}
+
+.btn-danger:hover {
+    -fx-background-color: -color-danger-hover;
+}
+
+.btn-warning {
+    -fx-background-color: -color-warning;
+}
+
+.btn-warning:hover {
+    -fx-background-color: -color-warning-hover;
+}
+
+.btn-secondary {
+    -fx-background-color: -color-surface-strong;
+    -fx-text-fill: -color-text;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+}
+
+.btn-secondary:hover {
+    -fx-background-color: -color-border;
+    -fx-border-color: -color-border-strong;
+}
+
+.btn-outline {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-primary;
+    -fx-border-color: -color-primary;
+    -fx-border-width: 1.5px;
+    -fx-effect: none;
+}
+
+.btn-outline:hover {
+    -fx-background-color: -color-primary-soft;
+    -fx-border-color: -color-primary-hover;
+    -fx-text-fill: -color-primary-hover;
+}
+
+.btn-ghost {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-text-soft;
+    -fx-effect: none;
+}
+
+.btn-ghost:hover {
+    -fx-background-color: -color-surface-strong;
+    -fx-text-fill: -color-text;
+}
+
+.btn-link {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-primary;
+    -fx-padding: 2 4;
+    -fx-effect: none;
+    -fx-underline: true;
+}
+
+.btn-link:hover {
+    -fx-text-fill: -color-primary-hover;
+}
+
+.danger-text-button {
+    -fx-text-fill: -color-danger;
+}
+
+.danger-text-button:hover {
+    -fx-text-fill: -color-danger-hover;
+    -fx-background-color: -color-danger-soft;
+}
+
+/* 按钮图标辅助类 */
+.btn-icon-only {
+    -fx-padding: 6;
+    -fx-min-width: 32px;
+    -fx-min-height: 32px;
+}
+
+/* ==================== 输入控件 ==================== */
+.text-field,
+.password-field,
+.text-area,
+.combo-box {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-padding: 8 12;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+}
+
+.text-field:hover,
+.password-field:hover,
+.text-area:hover,
+.combo-box:hover {
+    -fx-border-color: -color-border-strong;
+}
+
+.text-field:focused,
+.password-field:focused,
+.text-area:focused,
+.combo-box:focused {
+    -fx-border-color: -color-primary;
+    -fx-border-width: 1.5px;
+    -fx-effect: dropshadow(gaussian, rgba(31, 95, 191, 0.16), 10, 0, 0, 0);
+}
+
+.text-input {
+    -fx-prompt-text-fill: -color-text-muted;
+    -fx-highlight-fill: -color-primary-soft;
+    -fx-highlight-text-fill: -color-text;
+}
+
+.text-area {
+    -fx-background-insets: 0;
+}
+
+.text-area .content {
+    -fx-background-color: transparent;
+    -fx-padding: 6 8;
+}
+
+.combo-box {
+    -fx-padding: 2 0 2 8;
+}
+
+.combo-box .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 10 0 6;
+}
+
+.combo-box .arrow {
+    -fx-background-color: -color-text-soft;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 10px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 10px;
+    -fx-effect: dropshadow(gaussian, -color-shadow-strong, 14, 0.16, 0, 4);
+}
+
+/* ==================== 列表与滚动 ==================== */
+.list-view {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-padding: 4;
+}
+
+.list-view .viewport {
+    -fx-background-color: transparent;
+}
+
+.list-view.compact-list {
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-padding: 3;
+}
+
+.list-view.compact-list .list-cell {
+    -fx-padding: 9 12;
+}
+
+.list-cell {
+    -fx-padding: 11 14;
+    -fx-text-fill: -color-text;
+    -fx-background-color: transparent;
+    -fx-background-radius: 10px;
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.list-cell:filled:selected {
+    -fx-background-color:
+        linear-gradient(to right, -color-primary-soft 0%, transparent 100%);
+    -fx-text-fill: -color-primary-hover;
+    -fx-font-weight: 700;
+    -fx-border-color: transparent;
+}
+
 .list-cell:filled:hover {
-    -fx-background-color: #aed6f1;
+    -fx-background-color: -color-primary-soft;
 }
 
 .scroll-pane {
-    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical,
+.scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: -color-border-strong;
+    -fx-background-radius: 999px;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: -color-text-muted;
+}
+
+.scroll-bar .track {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+/* ==================== 导航标签按钮 ==================== */
+.toggle-button {
+    -fx-cursor: hand;
+}
+
+.tab-active {
+    -fx-background-color: -color-primary;
+    -fx-text-fill: white;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+}
+
+.tab-inactive {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-text-soft;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+}
+
+.tab-inactive:hover {
+    -fx-background-color: -color-surface-strong;
+}
+
+/* ==================== 分隔与链接 ==================== */
+.separator .line {
+    -fx-border-color: -color-divider;
+    -fx-border-width: 1px;
+}
+
+.hyperlink {
+    -fx-text-fill: -color-primary;
+    -fx-border-width: 0;
+    -fx-padding: 2 0;
+    -fx-underline: false;
+    -fx-font-size: 13px;
+}
+
+.hyperlink:hover {
+    -fx-text-fill: -color-primary-hover;
+    -fx-underline: true;
+}
+
+/* ==================== 评论与信息块 ==================== */
+.comment-username {
+    -fx-font-weight: 700;
+    -fx-font-size: 12px;
+    -fx-text-fill: -color-text;
+}
+
+.comment-time {
+    -fx-text-fill: -color-text-muted;
+    -fx-font-size: 10px;
+}
+
+.comment-stars {
+    -fx-font-size: 12px;
+    -fx-text-fill: -color-warning;
+}
+
+.comment-content {
+    -fx-font-size: 12px;
+    -fx-text-fill: -color-text-soft;
+    -fx-wrap-text: true;
+}
+
+.comment-cell {
+    -fx-padding: 10;
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 12px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 12px;
+    -fx-border-width: 1px;
+}
+
+/* ==================== 地图控件 ==================== */
+.map-control-card {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 10px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-padding: 6;
+    -fx-spacing: 6;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.12), 12, 0, 0, 4);
+}
+
+.map-control-btn {
+    -fx-min-width: 32px;
+    -fx-min-height: 32px;
+    -fx-pref-width: 32px;
+    -fx-pref-height: 32px;
+    -fx-background-color: -color-surface;
+    -fx-text-fill: -color-text;
+    -fx-border-color: -color-divider;
+    -fx-border-width: 1px;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-padding: 0;
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+}
+
+.map-control-btn:hover {
+    -fx-background-color: -color-surface-strong;
+    -fx-border-color: -color-border-strong;
+}
+
+.map-reset-btn {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.map-hint-chip {
+    -fx-background-color: rgba(0, 0, 0, 0.65);
+    -fx-text-fill: white;
+    -fx-padding: 5 12;
+    -fx-background-radius: 20px;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 8, 0, 0, 2);
+}
+
+.comment-like-count {
+    -fx-font-size: 11px;
+    -fx-text-fill: -color-text-soft;
+}
+
+/* ==================== 反馈标签 ==================== */
+.hint-banner {
+    -fx-background-color:
+        linear-gradient(to right, -color-primary-soft 0%, -color-surface-muted 100%);
+    -fx-background-radius: 10px;
+    -fx-padding: 9 12;
+    -fx-border-color: -color-border-strong;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-text-fill: -color-primary;
+    -fx-font-size: 12px;
+}
+
+.role-admin {
+    -fx-text-fill: -color-success;
+    -fx-font-weight: 700;
+    -fx-font-size: 13px;
+}
+
+.role-user {
+    -fx-text-fill: -color-text-soft;
+    -fx-font-size: 13px;
 }

@@ -3,4 +3,5 @@
 .claude/
 .cursor/
 target/
+CLAUDE.md
 *.exe
