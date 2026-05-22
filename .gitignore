@@ -3,5 +3,6 @@
 .claude/
 .cursor/
 target/
+output/
 CLAUDE.md
 *.exe
