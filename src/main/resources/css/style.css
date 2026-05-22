@@ -1039,6 +1039,16 @@
     -fx-background-color: -color-text-soft;
 }
 
+/* 确保 combo-box 选中值可见（默认不会从父级继承 -fx-text-fill） */
+.combo-box .list-cell {
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+    -fx-alignment: center-left;
+    -fx-padding: 2 4;
+    -fx-border-width: 0;
+    -fx-background-color: transparent;
+}
+
 .combo-box-popup .list-view {
     -fx-background-color: -color-surface;
     -fx-background-radius: 10px;

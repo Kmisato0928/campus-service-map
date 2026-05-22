@@ -10,11 +10,11 @@ import java.sql.SQLException;
 
 public class BuildingOverrideDAO {
 
-    // MySQL 表不存在的错误码
-    private static final int TABLE_NOT_FOUND = 1146;
+    // H2/MySQL 表不存在的 SQLState (42S02)
+    private static final String TABLE_NOT_FOUND = "42S02";
 
     private boolean isTableNotFound(SQLException e) {
-        return e.getErrorCode() == TABLE_NOT_FOUND;
+        return TABLE_NOT_FOUND.equals(e.getSQLState());
     }
 
     /**

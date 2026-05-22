@@ -36,11 +36,11 @@
             <version>${javafx.version}</version>
         </dependency>
 
-        <!-- MySQL Connector -->
+        <!-- H2 Database (嵌入式) -->
         <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.33</version>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.2.224</version>
         </dependency>
 
         <!-- JBCrypt -->

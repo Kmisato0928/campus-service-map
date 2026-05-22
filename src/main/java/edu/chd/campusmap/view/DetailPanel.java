@@ -10,6 +10,8 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ListCell;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
@@ -244,6 +246,14 @@ public class DetailPanel extends VBox {
         ratingBox.setItems(FXCollections.observableArrayList(1, 2, 3, 4, 5));
         ratingBox.setValue(5);
         ratingBox.setPrefWidth(70);
+        // 自定义 button cell 确保选中值始终可见
+        ratingBox.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : String.valueOf(item));
+            }
+        });
 
         submitBtn = new Button("发表");
         submitBtn.getStyleClass().addAll("button", "btn-primary");
@@ -266,8 +276,19 @@ public class DetailPanel extends VBox {
         VBox composerCard = new VBox(8, inputTitle, commentInput, commentBottom, msgLabel);
         composerCard.getStyleClass().add("section-card");
 
-        getChildren().addAll(headerRow, summaryCard, commentSection, composerCard);
-        VBox.setVgrow(commentSection, Priority.ALWAYS);
+        // 将所有内容放入 ScrollPane 以支持滚轮滚动（窗口较小时不会遮挡底部控件）
+        VBox contentBox = new VBox(12, headerRow, summaryCard, commentSection, composerCard);
+        contentBox.setMinHeight(0);
+
+        ScrollPane scrollPane = new ScrollPane(contentBox);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.getStyleClass().add("side-panel-scroll");
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+        scrollPane.setMinHeight(0);
+
+        getChildren().add(scrollPane);
 
         setVisible(false);
     }

@@ -81,8 +81,8 @@ public class CanvasMapRenderer extends Pane {
     public static class BuildingMarker {
         public final int id;
         public final String name;
-        public final double lat;
-        public final double lon;
+        public double lat;
+        public double lon;
         public final String category;
         public final Color color;
 
@@ -199,8 +199,12 @@ public class CanvasMapRenderer extends Pane {
         });
 
         setOnMouseReleased(e -> {
-            if (dragModeActive) {
+            if (dragModeActive && dragTarget != null) {
+                // 将拖拽后的坐标写回 marker，释放后标记停留在最终位置
+                dragTarget.lat = dragVisualLat;
+                dragTarget.lon = dragVisualLon;
                 dragTarget = null;
+                render();
             }
             isDragging = false;
         });
